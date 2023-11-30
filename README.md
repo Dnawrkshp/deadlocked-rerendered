@@ -4,11 +4,8 @@ Unity render wrapper for Ratchet: Deadlocked running in PCSX2.
 Windows only atm.
 
 # Screenshots
-Main Menu
-![main menu](./screenshots/mainmenu.png)
 
-Load Save
-![main menu](./screenshots/loadsave.png)
+<img src="./screenshots/mainmenu.png" alt="main menu" width="300" /> <img src="./screenshots/loadsave.png" alt="load save" width="300" />
 
 # Building
 1. Install the dependencies
