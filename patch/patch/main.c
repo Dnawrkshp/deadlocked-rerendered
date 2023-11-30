@@ -18,7 +18,8 @@
 #include <libdlsp/pad.h>
 #include <libdlsp/draw.h>
 
-#include "addresses.h"
+#include "underlay.h"
+#include "overlay.h"
 #include "commands.h"
 
 #define PRINT_TYPE_SIZE(type)           (printf(#type " %d\n", sizeof(type)))
@@ -38,17 +39,64 @@ struct Config config __attribute__((section(".config"))) = {
 	
 };
 
+#if DEBUG
+
 //--------------------------------------------------------------------------
-void TryPokeU32(u32 addr, u32 fromVal, u32 toVal) {
-	u32* a = (u32*)addr;
-	if (*a == fromVal)
-		*a = toVal;
+int DEBUG_VALUE = 0;
+void updateDebugValue(void)
+{
+  // makes it easy to test different values without restarting
+  static u16 lastPad = 0xFFFF;
+  u16 pad = (config.rPad[3] << 8) | config.rPad[2];
+  if ((pad & PAD_LEFT) == 0 && (lastPad & PAD_LEFT)) {
+    DEBUG_VALUE--;
+    printf("%d 0x%x\n", DEBUG_VALUE, DEBUG_VALUE);
+  } else if ((pad & PAD_RIGHT) == 0 && (lastPad & PAD_RIGHT)) {
+    DEBUG_VALUE++;
+    printf("%d 0x%x\n", DEBUG_VALUE, DEBUG_VALUE);
+  }
+
+  lastPad = pad;
 }
+
+#endif
 
 //--------------------------------------------------------------------------
 int isInputKBM(void)
 {
   return config.camDeltaX != 0 || config.camDeltaY != 0;
+}
+
+//--------------------------------------------------------------------------
+void hook_DrawWidget2D(struct Widget2D *pwidget, int scr_x, int scr_y, float scale_x, float scale_y, float theta_radians, u32 rgba, float t_frame)
+{
+  GameCommandDrawWidget2D_t cmd;
+
+  // get hooked func
+  DrawWidget2D_f drawWidget2DFunc = (DrawWidget2D_f)GetOverlayAddress((void**)&DrawWidget2D_lookup);
+  if (!drawWidget2DFunc) return;
+
+  // remove hook so we can call base
+  POKE_U32((u32)drawWidget2DFunc + 0, 0x27BDFFE0);
+  POKE_U32((u32)drawWidget2DFunc + 4, 0x00A0402D);
+
+  // call base
+  drawWidget2DFunc(pwidget, scr_x, scr_y, scale_x, scale_y, theta_radians, rgba, t_frame);
+
+  // pass upstream
+  memcpy(&cmd.Widget, pwidget, sizeof(cmd.Widget));
+  cmd.X = scr_x;
+  cmd.Y = scr_y;
+  cmd.ScaleX = scale_x;
+  cmd.ScaleY = scale_y;
+  cmd.Theta = theta_radians;
+  cmd.Color = rgba;
+  cmd.TFrame = t_frame;
+  writeCommand(GAME_CMD_DRAW_WIDGET2D, &cmd, sizeof(GameCommandDrawWidget2D_t));
+
+  // reinstall hook
+  HOOK_J((u32)drawWidget2DFunc + 0, &hook_DrawWidget2D);
+  POKE_U32((u32)drawWidget2DFunc + 4, 0);
 }
 
 //--------------------------------------------------------------------------
@@ -173,6 +221,13 @@ void hook(void) {
     HOOK_J((u32)drawQuadFunc + 0, &hook_OnDrawQuad);
     POKE_U32((u32)drawQuadFunc + 4, 0);
   }
+
+  // hook DrawWidget2DFlatPrim_asm
+  void* drawWidget2DFunc = GetOverlayAddress((void**)&DrawWidget2D_lookup);
+  if (drawWidget2DFunc) {
+    HOOK_J((u32)drawWidget2DFunc + 0, &hook_DrawWidget2D);
+    POKE_U32((u32)drawWidget2DFunc + 4, 0);
+  }
 }
 
 //--------------------------------------------------------------------------
@@ -192,13 +247,14 @@ void initialize(void) {
   PRINT_TYPE_SIZE(GameCommandDrawReticule_t);
   PRINT_TYPE_SIZE(GameCommandDrawText_t);
   PRINT_TYPE_SIZE(GameCommandDrawQuad_t);
+  PRINT_TYPE_SIZE(GameCommandDrawWidget2D_t);
 
   PRINT_VAR_ADDR(config.ready);
   PRINT_VAR_ADDR(config.rPad);
   PRINT_VAR_ADDR(config.camDeltaX);
   PRINT_VAR_ADDR(config.camDeltaY);
   PRINT_VAR_ADDR(config.disableRendering);
-
+  
   config.ready = 1;
 }
 
@@ -215,7 +271,11 @@ int entrypoint(u64 a0, u64 a1)
   }
 
   hook();
-  
+
+#if DEBUG
+  updateDebugValue();
+#endif
+
   // process incoming commands
 	processCommands();
 

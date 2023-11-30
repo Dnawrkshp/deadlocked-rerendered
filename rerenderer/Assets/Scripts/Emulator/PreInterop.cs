@@ -112,6 +112,13 @@ public class PreInterop : MonoBehaviour
                                             GameManager.Singleton.IncomingCommands.Add(cmd);
                                             break;
                                         }
+                                    case GameCommandIds.GAME_CMD_DRAW_WIDGET2D:
+                                        {
+                                            var cmd = new GameCommandDrawWidget2D();
+                                            cmd.Deserialize(reader, size);
+                                            GameManager.Singleton.IncomingCommands.Add(cmd);
+                                            break;
+                                        }
                                 }
                             }
                             catch (System.Exception ex)

@@ -654,8 +654,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1234, y: 0}
+  m_AnchoredPosition: {x: 0, y: -1}
+  m_SizeDelta: {x: 1234.2858, y: -2}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4650163157887218648
 CanvasRenderer:
@@ -681,12 +681,18 @@ MonoBehaviour:
     type: 3}
   QuadPrefab: {fileID: 738183242748502918, guid: ed2dc8d77f9d17c48ab3f76eb1b08755,
     type: 3}
+  Widget2DPrefab: {fileID: 521333068714804952, guid: ffb949a3f64cdd44f8bb96fcdfd82beb,
+    type: 3}
   Canvas: {fileID: 7712135124061455679}
   Fonts:
   - {fileID: 11400000, guid: 9e27005e08c4d1c4c896b11ef4f4270e, type: 2}
   - {fileID: 11400000, guid: 98dd239c4222836459e09ab94bd85b7e, type: 2}
   - {fileID: 0}
   PostScale: {x: 1, y: 1}
+  WidgetScale: 16
+  UIDimensions: {x: 476, y: 416}
+  NormalDimensions: {x: 512, y: 448}
+  RelDimensions: {x: 509, y: 448}
 --- !u!1 &6051921268628166565
 GameObject:
   m_ObjectHideFlags: 0

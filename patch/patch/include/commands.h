@@ -12,6 +12,7 @@ enum GameCommandIds {
   GAME_CMD_DRAW_RETICULE = 4,
   GAME_CMD_DRAW_TEXT = 5,
   GAME_CMD_DRAW_QUAD = 6,
+  GAME_CMD_DRAW_WIDGET2D = 7,
 };
 
 typedef struct GameCommandMobySpawned {
@@ -62,6 +63,17 @@ typedef struct GameCommandDrawQuad {
   vec2f Points[4];
   struct DrawParams Params;
 } GameCommandDrawQuad_t;
+
+typedef struct GameCommandDrawWidget2D {
+  struct Widget2D Widget;
+  int X;
+  int Y;
+  float ScaleX;
+  float ScaleY;
+  float Theta;
+  u32 Color;
+  float TFrame;
+} GameCommandDrawWidget2D_t;
 
 void processCommands(void);
 void writeCommand(enum GameCommandIds id, void * data, int size);

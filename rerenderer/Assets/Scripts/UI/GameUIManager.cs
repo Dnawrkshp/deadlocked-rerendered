@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -10,14 +11,17 @@ namespace UI
     {
         public TMPro.TMP_Text TextPrefab;
         public QuadElement QuadPrefab;
+        public PolyElement Widget2DPrefab;
         public Canvas Canvas;
         public List<TMP_FontAsset> Fonts;
         public Vector2 PostScale = Vector2.one;
 
         private List<TMPro.TMP_Text> textElements = new List<TMPro.TMP_Text>();
         private List<QuadElement> quadElements = new List<QuadElement>();
+        private List<PolyElement> widget2DElements = new List<PolyElement>();
         private int currentTextElementIdx = 0;
         private int currentQuadElementIdx = 0;
+        private int currentWidget2DElementIdx = 0;
         private Queue<IGameCommand> commandQueue = new Queue<IGameCommand>();
 
         private void Start()
@@ -41,6 +45,7 @@ namespace UI
                     }
                 case GameCommandDrawText:
                 case GameCommandDrawQuad:
+                case GameCommandDrawWidget2D:
                     {
                         commandQueue.Enqueue(cmd);
                         break;
@@ -48,67 +53,73 @@ namespace UI
             }
         }
 
-        private TMP_Text GetOrCreateFreeTextElement()
+        private unsafe void Swap()
         {
-            TMP_Text textElement = null;
-
-            if (currentTextElementIdx < textElements.Count)
-            {
-                textElement = textElements[currentTextElementIdx++];
-                textElement.transform.SetAsLastSibling();
-                return textElement;
-            }
-
-            textElement = Instantiate(TextPrefab);
-            textElement.transform.SetParent(this.transform, false);
-            textElements.Add(textElement);
-            currentTextElementIdx = textElements.Count;
-            return textElement;
-        }
-
-        private QuadElement GetOrCreateFreeQuadElement()
-        {
-            QuadElement quadElement = null;
-
-            if (currentQuadElementIdx < quadElements.Count)
-            {
-                quadElement = quadElements[currentQuadElementIdx++];
-                quadElement.transform.SetAsLastSibling();
-                return quadElement;
-            }
-
-            quadElement = Instantiate(QuadPrefab);
-            quadElement.transform.SetParent(this.transform, false);
-            quadElements.Add(quadElement);
-            currentQuadElementIdx = quadElements.Count;
-            return quadElement;
-        }
-
-        private void ClearUnusedElements()
-        {
-            while (currentTextElementIdx < textElements.Count)
-            {
-                Destroy(textElements[currentTextElementIdx].gameObject);
-                textElements.RemoveAt(currentTextElementIdx);
-            }
-
-            while (currentQuadElementIdx < quadElements.Count)
-            {
-                Destroy(quadElements[currentQuadElementIdx].gameObject);
-                quadElements.RemoveAt(currentQuadElementIdx);
-            }
-        }
-
-        private void Swap()
-        {
-            currentTextElementIdx = 0;
-            currentQuadElementIdx = 0;
+            ResetElementCounters();
 
             // pop
             while (commandQueue.TryDequeue(out var cmd))
             {
                 switch (cmd)
                 {
+                    case GameCommandDrawWidget2D drawWidget2DCmd:
+                        {
+                            if (!QuadPrefab) break;
+
+                            var bytesPerPrim = drawWidget2DCmd.PrimType == 1 ? 2 : 4;
+
+                            // read arrays from emu
+                            var bytesPositions = EmuInterop.ReadBytes(drawWidget2DCmd.Positions.Address, drawWidget2DCmd.VertexCount * 2 * sizeof(short));
+                            if (bytesPositions == null) break;
+                            var bytesUVs = EmuInterop.ReadBytes(drawWidget2DCmd.UVs.Address, drawWidget2DCmd.VertexCount * 2 * sizeof(short));
+                            if (bytesUVs == null) break;
+                            var bytesColors = EmuInterop.ReadBytes(drawWidget2DCmd.Colors.Address, drawWidget2DCmd.VertexCount * sizeof(int));
+                            if (bytesColors == null) break;
+                            var bytesPrims = EmuInterop.ReadBytes(drawWidget2DCmd.Polys.Address, drawWidget2DCmd.PrimCount * bytesPerPrim);
+                            if (bytesPrims == null) break;
+
+                            // get pointers to array
+                            short* pPositions = (short*)bytesPositions.Value.Ref();
+                            short* pUVs = (short*)bytesUVs.Value.Ref();
+                            uint* pColors = (uint*)bytesColors.Value.Ref();
+                            byte* pPrims = (byte*)bytesPrims.Value.Ref();
+
+                            var polyElement = GetOrCreateFreeWidget2DElement();
+                            var rectTransform = polyElement.GetComponent<RectTransform>();
+                            polyElement.PolyLen = bytesPerPrim;
+
+                            // build list of vertices/colors/uvs
+                            for (int i = 0; i < drawWidget2DCmd.VertexCount; i++)
+                            {
+                                polyElement.m_Vertices.Add(Canvas.RatchetScreenSpaceToUnityScreenSpace(pPositions[i * 2 + 0] / 16f, pPositions[i * 2 + 1] / 16f));
+                                polyElement.m_UVs.Add(Vector2.zero);
+                                polyElement.m_Colors.Add(drawWidget2DCmd.Color);
+                            }
+
+                            // build list of indices
+                            for (int i = 0; i < drawWidget2DCmd.PrimCount; i++)
+                            {
+                                switch (drawWidget2DCmd.PrimType)
+                                {
+                                    case 0: // quad
+                                        {
+                                            polyElement.m_Indices.Add(new PolyElement.Poly(pPrims[i * 4 + 0], pPrims[i * 4 + 1], pPrims[i * 4 + 2], pPrims[i * 4 + 3]));
+                                            break;
+                                        }
+                                    case 1: // line
+                                        {
+                                            polyElement.m_Indices.Add(new PolyElement.Poly(pPrims[i * 2 + 0], pPrims[i * 2 + 1]));
+                                            break;
+                                        }
+                                    default: throw new NotImplementedException();
+                                }
+                            }
+
+                            rectTransform.anchoredPosition = Canvas.RatchetScreenSpaceToUnityScreenSpace(drawWidget2DCmd.X, drawWidget2DCmd.Y);
+                            rectTransform.localScale = new Vector3(drawWidget2DCmd.ScaleX, drawWidget2DCmd.ScaleY, 1);
+                            polyElement.Dirty();
+                            break;
+                        }
                     case GameCommandDrawQuad drawQuadCmd:
                         {
                             if (!QuadPrefab) break;
@@ -187,5 +198,95 @@ namespace UI
 
             ClearUnusedElements();
         }
+
+
+        private TMP_Text GetOrCreateFreeTextElement()
+        {
+            TMP_Text elem = null;
+
+            if (currentTextElementIdx < textElements.Count)
+            {
+                elem = textElements[currentTextElementIdx++];
+                elem.transform.SetAsLastSibling();
+                return elem;
+            }
+
+            elem = Instantiate(TextPrefab);
+            elem.transform.SetParent(this.transform, false);
+            textElements.Add(elem);
+            currentTextElementIdx = textElements.Count;
+            return elem;
+        }
+
+        private QuadElement GetOrCreateFreeQuadElement()
+        {
+            QuadElement elem = null;
+
+            if (currentQuadElementIdx < quadElements.Count)
+            {
+                elem = quadElements[currentQuadElementIdx++];
+                elem.transform.SetAsLastSibling();
+                return elem;
+            }
+
+            elem = Instantiate(QuadPrefab);
+            elem.transform.SetParent(this.transform, false);
+            quadElements.Add(elem);
+            currentQuadElementIdx = quadElements.Count;
+            return elem;
+        }
+
+        private PolyElement GetOrCreateFreeWidget2DElement()
+        {
+            PolyElement elem = null;
+
+            if (currentWidget2DElementIdx < widget2DElements.Count)
+            {
+                elem = widget2DElements[currentWidget2DElementIdx++];
+                elem.transform.SetAsLastSibling();
+            }
+            else
+            {
+                elem = Instantiate(Widget2DPrefab);
+                elem.transform.SetParent(this.transform, false);
+                widget2DElements.Add(elem);
+                currentWidget2DElementIdx = widget2DElements.Count;
+            }
+
+            elem.m_Vertices.Clear();
+            elem.m_UVs.Clear();
+            elem.m_Colors.Clear();
+            elem.m_Indices.Clear();
+            return elem;
+        }
+
+        private void ClearUnusedElements()
+        {
+            while (currentTextElementIdx < textElements.Count)
+            {
+                Destroy(textElements[currentTextElementIdx].gameObject);
+                textElements.RemoveAt(currentTextElementIdx);
+            }
+
+            while (currentQuadElementIdx < quadElements.Count)
+            {
+                Destroy(quadElements[currentQuadElementIdx].gameObject);
+                quadElements.RemoveAt(currentQuadElementIdx);
+            }
+
+            while (currentWidget2DElementIdx < widget2DElements.Count)
+            {
+                Destroy(widget2DElements[currentWidget2DElementIdx].gameObject);
+                widget2DElements.RemoveAt(currentWidget2DElementIdx);
+            }
+        }
+
+        private void ResetElementCounters()
+        {
+            currentTextElementIdx = 0;
+            currentQuadElementIdx = 0;
+            currentWidget2DElementIdx = 0;
+        }
+
     }
 }

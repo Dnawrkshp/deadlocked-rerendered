@@ -16,6 +16,7 @@ public enum GameCommandIds
     GAME_CMD_DRAW_RETICULE = 4,
     GAME_CMD_DRAW_TEXT = 5,
     GAME_CMD_DRAW_QUAD = 6,
+    GAME_CMD_DRAW_WIDGET2D = 7,
 }
 
 public interface IGameCommand
@@ -256,6 +257,7 @@ public class GameCommandDrawQuad : IGameCommand
         Color2 = reader.ReadUInt32().RCRgbaToColor();
         Color3 = reader.ReadUInt32().RCRgbaToColor();
         Fade = reader.ReadSingle();
+        reader.ReadBytes(4);
     }
 
     public void Serialize(BinaryWriter writer)
@@ -294,5 +296,55 @@ public class GameCommandDrawQuad : IGameCommand
         writer.Write((byte)(Color3.b * 255));
         writer.Write((byte)(Color3.a * 128));
         writer.Write(Fade);
+        writer.Write(0);
+    }
+}
+
+public class GameCommandDrawWidget2D : IGameCommand
+{
+    public GameCommandIds Id => GameCommandIds.GAME_CMD_DRAW_WIDGET2D;
+    public RCPointer Positions { get; set; }
+    public RCPointer UVs { get; set; }
+    public RCPointer Colors { get; set; }
+    public RCPointer Polys { get; set; }
+    public short VertexCount { get; set; }
+    public short PrimCount { get; set; }
+    public byte PrimType { get; set; }
+    public byte Flags { get; set; }
+    public short FrameCount { get; set; }
+
+    public int X { get; set; }
+    public int Y { get; set; }
+    public float ScaleX { get; set; }
+    public float ScaleY { get; set; }
+    public float Theta { get; set; }
+    public Color Color { get; set; }
+    public float TFrame { get; set; }
+
+    public void Deserialize(BinaryReader reader, int size)
+    {
+        Positions = new RCPointer(reader.ReadUInt32());
+        UVs = new RCPointer(reader.ReadUInt32());
+        Colors = new RCPointer(reader.ReadUInt32());
+        Polys = new RCPointer(reader.ReadUInt32());
+        VertexCount = reader.ReadInt16();
+        PrimCount = reader.ReadInt16();
+        PrimType = reader.ReadByte();
+        Flags = reader.ReadByte();
+        FrameCount = reader.ReadInt16();
+        reader.ReadBytes(8);
+
+        X = reader.ReadInt32();
+        Y = reader.ReadInt32();
+        ScaleX = reader.ReadSingle();
+        ScaleY = reader.ReadSingle();
+        Theta = reader.ReadSingle();
+        Color = reader.ReadUInt32().RCRgbaToColor();
+        TFrame = reader.ReadSingle();
+    }
+
+    public void Serialize(BinaryWriter writer)
+    {
+        throw new NotImplementedException();
     }
 }

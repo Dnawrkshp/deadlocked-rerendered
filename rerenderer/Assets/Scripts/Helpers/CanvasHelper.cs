@@ -10,10 +10,15 @@ public static class CanvasHelper
         return new Vector2(ratio * (Constants.UI_SCREEN_WIDTH / Constants.SCREEN_WIDTH), ratio);
     }
 
+    public static Vector2 RatchetTextSpaceToUnityScreenSpace(this Canvas canvas, float ratchetX, float ratchetY)
+    {
+        var scale = canvas.GetRatchetScreenSpaceToUnityScreenSpaceRatio();
+        return new Vector2(ratchetX * scale.x, -ratchetY * scale.y);
+    }
+
     public static Vector2 RatchetScreenSpaceToUnityScreenSpace(this Canvas canvas, float ratchetX, float ratchetY)
     {
         var scale = canvas.GetRatchetScreenSpaceToUnityScreenSpaceRatio();
-
         return new Vector2(ratchetX * scale.x, -ratchetY * scale.y);
     }
 
