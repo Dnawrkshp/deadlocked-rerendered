@@ -1,0 +1,7 @@
+{
+  "IsoPath": "C:\\path\\to\\deadlocked.iso",
+  "Emulator": {
+    "BiosFolder": "C:\\path\\to\\bios\\folder\\",
+    "BiosFilename": "bios_filename.bin"
+  }
+}

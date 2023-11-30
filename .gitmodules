@@ -1,0 +1,3 @@
+[submodule "patch/libdlsp"]
+	path = patch/libdlsp
+	url = https://github.com/Dnawrkshp/libdlsp

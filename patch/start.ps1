@@ -1,0 +1,1 @@
+docker run -it --rm -v "$PWD\:/src" -v "$PWD/../rerenderer/Assets/Resources/Patch:/out" ps2dev/ps2dev:v1.2.0

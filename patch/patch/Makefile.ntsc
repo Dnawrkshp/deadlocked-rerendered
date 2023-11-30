@@ -1,0 +1,26 @@
+EE_ELF ?= patch-ntsc.elf
+EE_BIN ?= patch-ntsc.bin
+EE_OBJS += main.o commands.o overlay.o
+EE_LIBS += -ldlsp
+EE_DEFS += -DNTSC
+
+EE_INCS := -I./include -I../libdlsp/include
+EE_LDFLAGS = -fno-builtin -nostdlib -nostartfiles -L. -L../libdlsp/lib
+
+# set to DEBUG or RELEASE
+BUILD_CONFIG := DEBUG
+
+ifeq ($(BUILD_CONFIG),DEBUG)
+EE_DEFS += -DDEBUG
+else ifeq ($(BUILD_CONFIG),RELEASE)
+EE_DEFS +=
+endif
+
+all: $(EE_BIN) clean copy
+
+clean:
+	rm -f *.irx *.o
+
+include ${CURDIR}/../Makefile.pref
+include ${CURDIR}/../Makefile.eeglobal
+include ${CURDIR}/../Makefile.rules
