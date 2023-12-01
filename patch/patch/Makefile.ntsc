@@ -1,6 +1,6 @@
 EE_ELF ?= patch-ntsc.elf
 EE_BIN ?= patch-ntsc.bin
-EE_OBJS += main.o commands.o overlay.o
+EE_OBJS += main.o commands.o draw.o hooker.o
 EE_LIBS += -ldlsp
 EE_DEFS += -DNTSC
 
@@ -18,7 +18,7 @@ endif
 
 all: $(EE_BIN) clean copy
 
-clean:
+clean: 
 	rm -f *.irx *.o
 
 include ${CURDIR}/../Makefile.pref

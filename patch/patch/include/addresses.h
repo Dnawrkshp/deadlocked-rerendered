@@ -1,8 +1,5 @@
-#ifndef __DL_UNDERLAY_H__
-#define __DL_UNDERLAY_H__
-
-#include <libdlsp/overlay.h>
-#include <libdlsp/underlay.h>
+#ifndef __DL_ADDRESSES_H__
+#define __DL_ADDRESSES_H__
 
 //--------------------------------------------------------------------------
 #define UNDERLAY_FIXED_ENTRYPOINT_FUNC_NTSC             (0x00126f10)
@@ -19,4 +16,4 @@
 
 #endif
 
-#endif // __DL_UNDERLAY_H__
+#endif // __DL_ADDRESSES_H__

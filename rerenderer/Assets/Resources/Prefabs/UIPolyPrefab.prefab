@@ -72,3 +72,4 @@ MonoBehaviour:
   m_UVs: []
   m_Colors: []
   m_Indices: []
+  ConnectSegments: 1

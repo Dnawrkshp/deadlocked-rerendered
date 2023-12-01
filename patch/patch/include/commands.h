@@ -1,5 +1,5 @@
-#ifndef __DZO_COMMANDS_H__
-#define __DZO_COMMANDS_H__
+#ifndef __DL_COMMANDS_H__
+#define __DL_COMMANDS_H__
 
 #include <libdlsp/math3d.h>
 #include <libdlsp/draw.h>
@@ -41,7 +41,6 @@ typedef struct GameCommandDrawReticule {
 } GameCommandDrawReticule_t;
 
 typedef struct GameCommandDrawText {
-  u32 ReturnAddress;
   u32 Color;
   int Length;
   int Alignment;
@@ -62,6 +61,9 @@ typedef struct GameCommandDrawText {
 typedef struct GameCommandDrawQuad {
   vec2f Points[4];
   struct DrawParams Params;
+  u32 Z;
+  char ZWrite;
+  char Draw;
 } GameCommandDrawQuad_t;
 
 typedef struct GameCommandDrawWidget2D {
@@ -80,4 +82,4 @@ void writeCommand(enum GameCommandIds id, void * data, int size);
 void writeCustomPatchCommand(int id, int size, void * data);
 void clearCommandBuffer(void);
 
-#endif // __DZO_COMMANDS_H__
+#endif // __DL_COMMANDS_H__

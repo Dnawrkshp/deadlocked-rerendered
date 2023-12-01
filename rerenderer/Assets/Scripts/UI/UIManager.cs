@@ -16,6 +16,11 @@ namespace UI
         public GameUIManager GameUIScreen;
         public UIMenuManager MenuScreen;
 
+        [Header("Camera")]
+        public Camera UICamera;
+        
+        private RenderTexture uiTargetRt;
+
         private void Awake()
         {
             Singleton = this;
@@ -27,6 +32,8 @@ namespace UI
                 MenuScreen.gameObject.SetActive(RenderMenu);
             if (GameUIScreen && GameUIScreen.isActiveAndEnabled != RenderGameUI)
                 GameUIScreen.gameObject.SetActive(RenderGameUI);
+
+            UpdateUIRenderTexture();
         }
 
         public void EnableUIInput(float delay = 0f)
@@ -50,6 +57,25 @@ namespace UI
             yield return new WaitForSeconds(delay);
 
             UIInputEnabled = value;
+        }
+
+        private void UpdateUIRenderTexture()
+        {
+            var targetWidth = Screen.width;
+            var targetHeight = Screen.height;
+
+            if (!uiTargetRt || uiTargetRt.width != targetWidth || uiTargetRt.height != targetHeight)
+            {
+                if (uiTargetRt) uiTargetRt.Release();
+
+                uiTargetRt = new RenderTexture(targetWidth, targetHeight, 16, RenderTextureFormat.ARGB32);
+                Shader.SetGlobalTexture("_uiTarget", uiTargetRt);
+            }
+
+            UICamera.enabled = uiTargetRt;
+            UICamera.targetTexture = uiTargetRt;
+            UICamera.orthographicSize = targetHeight / 2f;
+            UICamera.aspect = targetWidth / targetHeight;
         }
     }
 

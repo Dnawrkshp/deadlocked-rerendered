@@ -12,6 +12,8 @@ namespace UI
         public TMPro.TMP_Text TextPrefab;
         public QuadElement QuadPrefab;
         public PolyElement Widget2DPrefab;
+        public GameObject ZClearPrefab;
+
         public Canvas Canvas;
         public List<TMP_FontAsset> Fonts;
         public Vector2 PostScale = Vector2.one;
@@ -19,9 +21,12 @@ namespace UI
         private List<TMPro.TMP_Text> textElements = new List<TMPro.TMP_Text>();
         private List<QuadElement> quadElements = new List<QuadElement>();
         private List<PolyElement> widget2DElements = new List<PolyElement>();
+        private List<GameObject> zClearElements = new List<GameObject>();
         private int currentTextElementIdx = 0;
         private int currentQuadElementIdx = 0;
         private int currentWidget2DElementIdx = 0;
+        private int currentZClearElementIdx = 0;
+        private bool lastQuadWasZWrite = false;
         private Queue<IGameCommand> commandQueue = new Queue<IGameCommand>();
 
         private void Start()
@@ -64,7 +69,7 @@ namespace UI
                 {
                     case GameCommandDrawWidget2D drawWidget2DCmd:
                         {
-                            if (!QuadPrefab) break;
+                            if (!Widget2DPrefab) break;
 
                             var bytesPerPrim = drawWidget2DCmd.PrimType == 1 ? 2 : 4;
 
@@ -124,28 +129,15 @@ namespace UI
                         {
                             if (!QuadPrefab) break;
 
+                            if (drawQuadCmd.ZWrite && !lastQuadWasZWrite)
+                            {
+                                GetOrCreateFreeZClearElement();
+                            }
+
                             var quadElement = GetOrCreateFreeQuadElement();
-                            var rectTransform = quadElement.GetComponent<RectTransform>();
+                            quadElement.PopulateFrom(Canvas, drawQuadCmd);
 
-                            // translate to unity screen space
-                            // set ui element position to midpoint
-                            // set vertex positions relative to midpoint
-                            var p0 = Canvas.RatchetRelativeScreenSpaceToUnityScreenSpace(drawQuadCmd.Point0.x, drawQuadCmd.Point0.y);
-                            var p1 = Canvas.RatchetRelativeScreenSpaceToUnityScreenSpace(drawQuadCmd.Point1.x, drawQuadCmd.Point1.y);
-                            var p2 = Canvas.RatchetRelativeScreenSpaceToUnityScreenSpace(drawQuadCmd.Point2.x, drawQuadCmd.Point2.y);
-                            var p3 = Canvas.RatchetRelativeScreenSpaceToUnityScreenSpace(drawQuadCmd.Point3.x, drawQuadCmd.Point3.y);
-
-                            var midpoint = (p0 + p1 + p2 + p3) / 4;
-                            rectTransform.anchoredPosition = midpoint;
-                            quadElement.m_Point0 = p0 - midpoint;
-                            quadElement.m_Point1 = p1 - midpoint;
-                            quadElement.m_Point2 = p2 - midpoint;
-                            quadElement.m_Point3 = p3 - midpoint;
-                            quadElement.m_Color0 = drawQuadCmd.Color0;
-                            quadElement.m_Color1 = drawQuadCmd.Color1;
-                            quadElement.m_Color2 = drawQuadCmd.Color2;
-                            quadElement.m_Color3 = drawQuadCmd.Color3;
-                            quadElement.Dirty();
+                            lastQuadWasZWrite = quadElement.ZWrite;
                             break;
                         }
                     case GameCommandDrawText drawTextCmd:
@@ -196,7 +188,7 @@ namespace UI
                 }
             }
 
-            ClearUnusedElements();
+            DisableUnusedElements();
         }
 
 
@@ -207,6 +199,7 @@ namespace UI
             if (currentTextElementIdx < textElements.Count)
             {
                 elem = textElements[currentTextElementIdx++];
+                elem.gameObject.SetActive(true);
                 elem.transform.SetAsLastSibling();
                 return elem;
             }
@@ -225,6 +218,7 @@ namespace UI
             if (currentQuadElementIdx < quadElements.Count)
             {
                 elem = quadElements[currentQuadElementIdx++];
+                elem.gameObject.SetActive(true);
                 elem.transform.SetAsLastSibling();
                 return elem;
             }
@@ -243,41 +237,61 @@ namespace UI
             if (currentWidget2DElementIdx < widget2DElements.Count)
             {
                 elem = widget2DElements[currentWidget2DElementIdx++];
+                elem.gameObject.SetActive(true);
                 elem.transform.SetAsLastSibling();
-            }
-            else
-            {
-                elem = Instantiate(Widget2DPrefab);
-                elem.transform.SetParent(this.transform, false);
-                widget2DElements.Add(elem);
-                currentWidget2DElementIdx = widget2DElements.Count;
+                elem.m_Vertices.Clear();
+                elem.m_UVs.Clear();
+                elem.m_Colors.Clear();
+                elem.m_Indices.Clear();
+                return elem;
             }
 
-            elem.m_Vertices.Clear();
-            elem.m_UVs.Clear();
-            elem.m_Colors.Clear();
-            elem.m_Indices.Clear();
+            elem = Instantiate(Widget2DPrefab);
+            elem.transform.SetParent(this.transform, false);
+            widget2DElements.Add(elem);
+            currentWidget2DElementIdx = widget2DElements.Count;
             return elem;
         }
 
-        private void ClearUnusedElements()
+        private GameObject GetOrCreateFreeZClearElement()
+        {
+            GameObject elem = null;
+
+            if (currentZClearElementIdx < zClearElements.Count)
+            {
+                elem = zClearElements[currentZClearElementIdx++];
+                elem.SetActive(true);
+                elem.transform.SetAsLastSibling();
+                return elem;
+            }
+
+            elem = Instantiate(ZClearPrefab);
+            elem.transform.SetParent(this.transform, false);
+            zClearElements.Add(elem);
+            currentZClearElementIdx = zClearElements.Count;
+            return elem;
+        }
+
+        private void DisableUnusedElements()
         {
             while (currentTextElementIdx < textElements.Count)
             {
-                Destroy(textElements[currentTextElementIdx].gameObject);
-                textElements.RemoveAt(currentTextElementIdx);
+                textElements[currentTextElementIdx++].gameObject.SetActive(false);
             }
 
             while (currentQuadElementIdx < quadElements.Count)
             {
-                Destroy(quadElements[currentQuadElementIdx].gameObject);
-                quadElements.RemoveAt(currentQuadElementIdx);
+                quadElements[currentQuadElementIdx++].gameObject.SetActive(false);
             }
 
             while (currentWidget2DElementIdx < widget2DElements.Count)
             {
-                Destroy(widget2DElements[currentWidget2DElementIdx].gameObject);
-                widget2DElements.RemoveAt(currentWidget2DElementIdx);
+                widget2DElements[currentWidget2DElementIdx++].gameObject.SetActive(false);
+            }
+
+            while (currentZClearElementIdx < zClearElements.Count)
+            {
+                zClearElements[currentZClearElementIdx++].gameObject.SetActive(false);
             }
         }
 
@@ -286,6 +300,7 @@ namespace UI
             currentTextElementIdx = 0;
             currentQuadElementIdx = 0;
             currentWidget2DElementIdx = 0;
+            currentZClearElementIdx = 0;
         }
 
     }

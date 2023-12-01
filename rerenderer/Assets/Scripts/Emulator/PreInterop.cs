@@ -50,91 +50,94 @@ public class PreInterop : MonoBehaviour
         if (EmuInterop.ConnectedAndGameStarted)
         {
             var commandBufferSize = EmuInterop.ReadInt32(Constants.CmdInAddress - 4) ?? 0;
-            var commandBuffer = EmuInterop.ReadBytes(Constants.CmdInAddress, commandBufferSize + 1);
-            if (commandBuffer != null)
+            if (commandBufferSize > 0)
             {
-                using (var ms = new MemoryStream(commandBuffer.Value.Buffer, (int)commandBuffer.Value.Offset, (int)commandBuffer.Value.Length, false))
+                var commandBuffer = EmuInterop.ReadBytes(Constants.CmdInAddress, commandBufferSize);
+                if (commandBuffer != null)
                 {
-                    using (var reader = new BinaryReader(ms))
+                    using (var ms = new MemoryStream(commandBuffer.Value.Buffer, (int)commandBuffer.Value.Offset, (int)commandBuffer.Value.Length, false))
                     {
-                        while (true)
+                        using (var reader = new BinaryReader(ms))
                         {
-                            var cmdId = (GameCommandIds)reader.ReadByte();
-                            if (cmdId == GameCommandIds.GAME_CMD_NONE)
-                                break;
-
-                            var size = reader.ReadInt16();
-                            var readerPosAtCommandPayload = reader.BaseStream.Position;
-
-                            try
+                            while (ms.Position < ms.Length)
                             {
-                                switch (cmdId)
+                                var cmdId = (GameCommandIds)reader.ReadByte();
+                                if (cmdId == GameCommandIds.GAME_CMD_NONE)
+                                    break;
+
+                                var size = reader.ReadInt16();
+                                var readerPosAtCommandPayload = reader.BaseStream.Position;
+
+                                try
                                 {
-                                    case GameCommandIds.GAME_CMD_ON_TICK_END:
-                                        {
-                                            var cmd = new GameCommandOnTickEnd();
-                                            cmd.Deserialize(reader, size);
-                                            GameManager.Singleton.IncomingCommands.Add(cmd);
-                                            break;
-                                        }
-                                    case GameCommandIds.GAME_CMD_MOBY_SPAWNED:
-                                        {
-                                            var cmd = new GameCommandMobySpawned();
-                                            cmd.Deserialize(reader, size);
-                                            GameManager.Singleton.IncomingCommands.Add(cmd);
-                                            break;
-                                        }
-                                    case GameCommandIds.GAME_CMD_MOBY_DESTROYED:
-                                        {
-                                            var cmd = new GameCommandMobyDestroyed();
-                                            cmd.Deserialize(reader, size);
-                                            GameManager.Singleton.IncomingCommands.Add(cmd);
-                                            break;
-                                        }
-                                    case GameCommandIds.GAME_CMD_DRAW_RETICULE:
-                                        {
-                                            var cmd = new GameCommandDrawReticule();
-                                            cmd.Deserialize(reader, size);
-                                            GameManager.Singleton.IncomingCommands.Add(cmd);
-                                            break;
-                                        }
-                                    case GameCommandIds.GAME_CMD_DRAW_TEXT:
-                                        {
-                                            var cmd = new GameCommandDrawText();
-                                            cmd.Deserialize(reader, size);
-                                            GameManager.Singleton.IncomingCommands.Add(cmd);
-                                            break;
-                                        }
-                                    case GameCommandIds.GAME_CMD_DRAW_QUAD:
-                                        {
-                                            var cmd = new GameCommandDrawQuad();
-                                            cmd.Deserialize(reader, size);
-                                            GameManager.Singleton.IncomingCommands.Add(cmd);
-                                            break;
-                                        }
-                                    case GameCommandIds.GAME_CMD_DRAW_WIDGET2D:
-                                        {
-                                            var cmd = new GameCommandDrawWidget2D();
-                                            cmd.Deserialize(reader, size);
-                                            GameManager.Singleton.IncomingCommands.Add(cmd);
-                                            break;
-                                        }
+                                    switch (cmdId)
+                                    {
+                                        case GameCommandIds.GAME_CMD_ON_TICK_END:
+                                            {
+                                                var cmd = new GameCommandOnTickEnd();
+                                                cmd.Deserialize(reader, size);
+                                                GameManager.Singleton.IncomingCommands.Add(cmd);
+                                                break;
+                                            }
+                                        case GameCommandIds.GAME_CMD_MOBY_SPAWNED:
+                                            {
+                                                var cmd = new GameCommandMobySpawned();
+                                                cmd.Deserialize(reader, size);
+                                                GameManager.Singleton.IncomingCommands.Add(cmd);
+                                                break;
+                                            }
+                                        case GameCommandIds.GAME_CMD_MOBY_DESTROYED:
+                                            {
+                                                var cmd = new GameCommandMobyDestroyed();
+                                                cmd.Deserialize(reader, size);
+                                                GameManager.Singleton.IncomingCommands.Add(cmd);
+                                                break;
+                                            }
+                                        case GameCommandIds.GAME_CMD_DRAW_RETICULE:
+                                            {
+                                                var cmd = new GameCommandDrawReticule();
+                                                cmd.Deserialize(reader, size);
+                                                GameManager.Singleton.IncomingCommands.Add(cmd);
+                                                break;
+                                            }
+                                        case GameCommandIds.GAME_CMD_DRAW_TEXT:
+                                            {
+                                                var cmd = new GameCommandDrawText();
+                                                cmd.Deserialize(reader, size);
+                                                GameManager.Singleton.IncomingCommands.Add(cmd);
+                                                break;
+                                            }
+                                        case GameCommandIds.GAME_CMD_DRAW_QUAD:
+                                            {
+                                                var cmd = new GameCommandDrawQuad();
+                                                cmd.Deserialize(reader, size);
+                                                GameManager.Singleton.IncomingCommands.Add(cmd);
+                                                break;
+                                            }
+                                        case GameCommandIds.GAME_CMD_DRAW_WIDGET2D:
+                                            {
+                                                var cmd = new GameCommandDrawWidget2D();
+                                                cmd.Deserialize(reader, size);
+                                                GameManager.Singleton.IncomingCommands.Add(cmd);
+                                                break;
+                                            }
+                                    }
                                 }
-                            }
-                            catch (System.Exception ex)
-                            {
-                                Debug.LogError($"error reading command {cmdId}: {ex.Message} {ex.StackTrace}");
+                                catch (System.Exception ex)
+                                {
+                                    Debug.LogError($"error reading command {cmdId}: {ex.Message} {ex.StackTrace}");
 
-                                // skip to next command
-                                var read = reader.BaseStream.Position - readerPosAtCommandPayload;
-                                var bytesToSkip = size - read;
-                                reader.BaseStream.Position += bytesToSkip;
-                            }
+                                    // skip to next command
+                                    var read = reader.BaseStream.Position - readerPosAtCommandPayload;
+                                    var bytesToSkip = size - read;
+                                    reader.BaseStream.Position += bytesToSkip;
+                                }
 
-                            // ensure we've read size number of bytes
-                            var bytesRead = reader.BaseStream.Position - readerPosAtCommandPayload;
-                            if (bytesRead != size)
-                                throw new System.Exception($"read {bytesRead} of expected {size} for {cmdId}");
+                                // ensure we've read size number of bytes
+                                var bytesRead = reader.BaseStream.Position - readerPosAtCommandPayload;
+                                if (bytesRead != size)
+                                    throw new System.Exception($"read {bytesRead} of expected {size} for {cmdId}");
+                            }
                         }
                     }
                 }

@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &2027663880788158457
+--- !u!1 &7038347468236490190
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,79 +8,67 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 3520813362993183281}
-  - component: {fileID: 8945978237440386269}
-  - component: {fileID: 738183242748502918}
+  - component: {fileID: 6471016628565819355}
+  - component: {fileID: 3546368837058230199}
+  - component: {fileID: 4863154298584349634}
   m_Layer: 5
-  m_Name: UIQuadPrefab
+  m_Name: UIZClearPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!224 &3520813362993183281
+--- !u!224 &6471016628565819355
 RectTransform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2027663880788158457}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_GameObject: {fileID: 7038347468236490190}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 1000.00006}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
---- !u!222 &8945978237440386269
+--- !u!222 &3546368837058230199
 CanvasRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2027663880788158457}
+  m_GameObject: {fileID: 7038347468236490190}
   m_CullTransparentMesh: 1
---- !u!114 &738183242748502918
+--- !u!114 &4863154298584349634
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2027663880788158457}
+  m_GameObject: {fileID: 7038347468236490190}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4da457e5e7b53e4bb4fed117ab25e09, type: 3}
+  m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 2100000, guid: 990abefab7d97a8429918b7d7d505210, type: 2}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 0
+  m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_ZWriteMaterial: {fileID: 2100000, guid: a14f5b19150b0154f8a21f972a0ef437, type: 2}
   m_Texture: {fileID: 0}
-  m_Point0: {x: 0, y: 0}
-  m_Point1: {x: 100, y: 0}
-  m_Point2: {x: 100, y: 100}
-  m_Point3: {x: 0, y: 100}
-  m_Color0: {r: 1, g: 1, b: 1, a: 1}
-  m_Color1: {r: 1, g: 1, b: 1, a: 1}
-  m_Color2: {r: 1, g: 1, b: 1, a: 1}
-  m_Color3: {r: 1, g: 1, b: 1, a: 1}
-  m_UV0: {x: 0, y: 1}
-  m_UV1: {x: 1, y: 1}
-  m_UV2: {x: 0, y: 0}
-  m_UV3: {x: 1, y: 0}
-  m_ShadowColor: {r: 0, g: 0, b: 0, a: 1}
-  m_ShadowOffset: {x: 0, y: 0}
-  Using: 0
-  ZWrite: 0
-  Draw: 0
+  m_UVRect:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 1
+    height: 1
