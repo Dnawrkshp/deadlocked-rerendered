@@ -14,44 +14,44 @@
 ENTRY(_start);
 
 SECTIONS {
-	.text 0x02010000: {
-		_ftext = . ;
-		*(.text)
-		KEEP(*(.config))
-		*(.text.*)
-		*(.gnu.linkonce.t*)
-		QUAD(0)
-	}
+  .text 0x02010000: {
+    _ftext = . ;
+    *(.text)
+    KEEP(*(.config))
+    *(.text.*)
+    *(.gnu.linkonce.t*)
+    QUAD(0)
+  }
 
-	PROVIDE(_etext = .);
-	PROVIDE(etext = .);
+  PROVIDE(_etext = .);
+  PROVIDE(etext = .);
 
-	.reginfo : { *(.reginfo) }
+  .reginfo : { *(.reginfo) }
 
-	/* Static data.  */
-	.rodata ALIGN(128): {
-		*(.rodata)
-		*(.rodata.*)
-		*(.gnu.linkonce.r*)
-	}
+  /* Static data.  */
+  .rodata ALIGN(128): {
+    *(.rodata)
+    *(.rodata.*)
+    *(.gnu.linkonce.r*)
+  }
 
-	.data ALIGN(128): {
-		_fdata = . ;
-		*(.data)
-		*(.data.*)
-		*(.gnu.linkonce.d*)
-		SORT(CONSTRUCTORS)
-	}
+  .data ALIGN(128): {
+    _fdata = . ;
+    *(.data)
+    *(.data.*)
+    *(.gnu.linkonce.d*)
+    SORT(CONSTRUCTORS)
+  }
 
-	.sdata ALIGN(128): {
-		*(.sdata)
-		*(.sdata.*)
-		*(.gnu.linkonce.s*)
-		*(.scommon)
-		*(.scommon.*)
-	}
+  .sdata ALIGN(128): {
+    *(.sdata)
+    *(.sdata.*)
+    *(.gnu.linkonce.s*)
+    *(.scommon)
+    *(.scommon.*)
+  }
 
 
-	_end = . ;
-	PROVIDE(end = .);
+  _end = . ;
+  PROVIDE(end = .);
 }

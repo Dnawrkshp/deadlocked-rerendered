@@ -1,4 +1,4 @@
-using RC;
+﻿using RC;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -10,6 +10,89 @@ using UnityEngine.SceneManagement;
 
 public static class RCHelper
 {
+    public static readonly Dictionary<uint, char> DEADLOCKED_EXTENDED_ASCII_REMAP = new Dictionary<uint, char>()
+    {
+        { 0x02, '¡' },
+        { 0x03, '©' },
+        // { 0x04, 'idk' },
+        { 0x05, '«' },
+        { 0x06, '®' },
+        { 0x07, '¢' },
+        // { 0x08, 'idk' },
+        { 0x09, '»' },
+        { 0x0a, '¿' },
+        { 0x0b, 'À' },
+        { 0x0c, 'Á' },
+        { 0x0d, 'Â' },
+        { 0x0e, 'Ã' },
+        { 0x0f, 'Ä' },
+        { 0x10, 'Å' },
+        { 0x11, 'Æ' },
+        { 0x12, 'Ç' },
+        { 0x13, 'È' },
+        { 0x14, 'É' },
+        { 0x15, 'Ê' },
+        { 0x16, 'Ë' },
+        { 0x17, 'Ì' },
+        { 0x18, 'Í' },
+        { 0x19, 'Î' },
+        { 0x1a, 'Ï' },
+        { 0x1b, 'Ñ' },
+        { 0x1c, 'Ò' },
+        { 0x1d, 'Ó' },
+        { 0x1e, 'Ô' },
+        { 0x1f, 'Õ' },
+        { 0x20, 'Ö' },
+        { 0x21, 'Ø' },
+        { 0x22, 'Ù' },
+        { 0x23, 'Ú' },
+        { 0x24, 'Û' },
+        // { 0x25, 'does not exist' },
+        { 0x26, 'Ü' },
+        { 0x27, 'ß' },
+        { 0x28, 'à' },
+        { 0x29, 'á' },
+        { 0x2a, 'â' },
+        { 0x2b, 'ã' },
+        { 0x2c, 'ä' },
+        { 0x2d, 'å' },
+        { 0x2e, 'æ' },
+        { 0x2f, 'ç' },
+        { 0x30, 'è' },
+        { 0x31, 'é' },
+        { 0x32, 'ê' },
+        { 0x33, 'ë' },
+        { 0x34, 'ì' },
+        { 0x35, 'í' },
+        { 0x36, 'î' },
+        { 0x37, 'ï' },
+        { 0x38, 'ñ' },
+        { 0x39, 'ò' },
+        { 0x3a, 'ó' },
+        { 0x3b, 'ô' },
+        { 0x3c, 'õ' },
+        { 0x3d, 'ö' },
+        { 0x3e, 'ø' },
+        { 0x3f, 'ù' },
+        { 0x40, 'ú' },
+        { 0x41, 'û' },
+        { 0x42, 'ü' },
+        { 0x43, 'ÿ' },
+        { 0x44, 'Œ' },
+        { 0x45, 'œ' },
+        { 0x46, 'Š' },
+        { 0x47, 'š' },
+        { 0x48, 'Ÿ' },
+        // { 0x49, 'idk' },
+        // { 0x4a, 'idk' },
+        { 0x4b, '“' },
+        { 0x4c, '”' },
+        { 0x4d, '„' },
+        { 0x4e, '…' },
+        { 0x4f, '€' },
+        // { 0x50, 'black line' },
+    };
+
     public static Vector3 SwizzleXZY(this Vector3 vector)
     {
         return new Vector3(vector.x, vector.z, vector.y);
@@ -118,93 +201,107 @@ public static class RCHelper
         {
             var c = rcString[i];
 
-            switch (c)
+            if ((c & 0x80) != 0)
             {
-                case '\x00': return sb.ToString();
+                // remap extended to our extended
+                if (DEADLOCKED_EXTENDED_ASCII_REMAP.TryGetValue(rcString[i + 1], out var extChar))
+                    sb.Append(extChar);
+                else
+                    sb.Append('■'); // default
 
-                // default color (close color tags)
-                case '\x08':
-                    while (colorCount > 0)
-                    {
-                        sb.Append("</color>");
-                        colorCount--;
-                    }
-                    break;
+                i += 1; // skip extended code
+            }
+            else
+            {
 
-                // blue
-                case '\x09':
-                    sb.Append("<color=#8176E2>");
-                    colorCount++;
-                    break;
+                switch (c)
+                {
+                    case '\x00': return sb.ToString();
 
-                // green
-                case '\x0A':
-                    sb.Append("<color=#4A9C3D>");
-                    colorCount++;
-                    break;
+                    // default color (close color tags)
+                    case '\x08':
+                        while (colorCount > 0)
+                        {
+                            sb.Append("</color>");
+                            colorCount--;
+                        }
+                        break;
 
-                // pink
-                case '\x0B':
-                    sb.Append("<color=#AD63A5>");
-                    colorCount++;
-                    break;
+                    // blue
+                    case '\x09':
+                        sb.Append("<color=#8176E2>");
+                        colorCount++;
+                        break;
 
-                // white
-                case '\x0C':
-                    sb.Append("<color=#DFD8D8>");
-                    colorCount++;
-                    break;
+                    // green
+                    case '\x0A':
+                        sb.Append("<color=#4A9C3D>");
+                        colorCount++;
+                        break;
 
-                // black
-                case '\x0D':
-                    sb.Append("<color=#0C0202>");
-                    colorCount++;
-                    break;
+                    // pink
+                    case '\x0B':
+                        sb.Append("<color=#AD63A5>");
+                        colorCount++;
+                        break;
 
-                // red
-                case '\x0E':
-                    sb.Append("<color=#E11F1F>");
-                    colorCount++;
-                    break;
+                    // white
+                    case '\x0C':
+                        sb.Append("<color=#DFD8D8>");
+                        colorCount++;
+                        break;
 
-                // aqua
-                case '\x0F':
-                    sb.Append("<color=#4CD1D1>");
-                    colorCount++;
-                    break;
+                    // black
+                    case '\x0D':
+                        sb.Append("<color=#0C0202>");
+                        colorCount++;
+                        break;
 
-                // BUTTONS
-                case '\x10':
-                case '\x11':
-                case '\x12':
-                case '\x13':
-                case '\x14':
-                case '\x15':
-                case '\x16':
-                case '\x17':
-                case '\x18':
-                case '\x19':
-                case '\x1A':
-                case '\x1B':
-                case '\x1C':
-                case '\x1D':
-                case '\x1E':
-                case '\x1F':
-                    sb.Append($"<sprite index={(int)c - 0x10}>");
-                    break;
+                    // red
+                    case '\x0E':
+                        sb.Append("<color=#E11F1F>");
+                        colorCount++;
+                        break;
 
-                // empty
-                case '\x01': 
-                case '\x02': 
-                case '\x03': 
-                case '\x04': 
-                case '\x05': 
-                case '\x06':
-                case '\x07':
-                    break;
+                    // aqua
+                    case '\x0F':
+                        sb.Append("<color=#4CD1D1>");
+                        colorCount++;
+                        break;
 
-                // add to string
-                default: sb.Append(c); break;
+                    // BUTTONS
+                    case '\x10':
+                    case '\x11':
+                    case '\x12':
+                    case '\x13':
+                    case '\x14':
+                    case '\x15':
+                    case '\x16':
+                    case '\x17':
+                    case '\x18':
+                    case '\x19':
+                    case '\x1A':
+                    case '\x1B':
+                    case '\x1C':
+                    case '\x1D':
+                    case '\x1E':
+                    case '\x1F':
+                        sb.Append($"<sprite index={(int)c - 0x10}>");
+                        break;
+
+                    // empty
+                    case '\x01':
+                    case '\x02':
+                    case '\x03':
+                    case '\x04':
+                    case '\x05':
+                    case '\x06':
+                    case '\x07':
+                        break;
+
+                    // add to string
+                    default: sb.Append(c); break;
+                }
             }
         }
 

@@ -24,7 +24,7 @@ public static class Constants
     public static readonly float SCREEN_WIDTH = 512f;
     public static readonly float SCREEN_HEIGHT = 448f;
 
-    public static readonly float UI_SCREEN_WIDTH = 478f;
+    public static readonly float UI_SCREEN_WIDTH = 476f;
     public static readonly float UI_SCREEN_HEIGHT = 416f;
 
     public static readonly float EMU_STARTUP_TIMEOUT_SECONDS = 20f;

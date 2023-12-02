@@ -1,10 +1,7 @@
 #ifndef __DL_ADDRESSES_H__
 #define __DL_ADDRESSES_H__
 
-#include <libdlsp/overlay.h>
-#include <libdlsp/underlay.h>
-
-// 
+//--------------------------------------------------------------------------
 #define UNDERLAY_FIXED_ENTRYPOINT_FUNC_NTSC             (0x00126f10)
 #define UNDERLAY_FIXED_VSYNC2_RETURN_NTSC               (0x0012715C)
 #define UNDERLAY_FIXED_PLAYER_1_PAD_NTSC                (0x001EE600)

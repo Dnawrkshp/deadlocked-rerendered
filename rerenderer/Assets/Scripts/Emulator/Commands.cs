@@ -16,6 +16,7 @@ public enum GameCommandIds
     GAME_CMD_DRAW_RETICULE = 4,
     GAME_CMD_DRAW_TEXT = 5,
     GAME_CMD_DRAW_QUAD = 6,
+    GAME_CMD_DRAW_WIDGET2D = 7,
 }
 
 public interface IGameCommand
@@ -143,7 +144,6 @@ public class GameCommandDrawReticule : IGameCommand
 public class GameCommandDrawText : IGameCommand
 {
     public GameCommandIds Id => GameCommandIds.GAME_CMD_DRAW_TEXT;
-    public uint ReturnAddress { get; set; }
     public Color Color { get; set; }
     public int Length { get; set; }
     public int Alignment { get; set; }
@@ -162,7 +162,6 @@ public class GameCommandDrawText : IGameCommand
 
     public void Deserialize(BinaryReader reader, int size)
     {
-        ReturnAddress = reader.ReadUInt32();
         Color = reader.ReadUInt32().RCRgbaToColor();
         Length = reader.ReadInt32();
         Alignment = reader.ReadInt32();
@@ -183,40 +182,7 @@ public class GameCommandDrawText : IGameCommand
 
     public void Serialize(BinaryWriter writer)
     {
-        writer.Write(ReturnAddress);
-        writer.Write((byte)(Color.r * 255));
-        writer.Write((byte)(Color.g * 255));
-        writer.Write((byte)(Color.b * 255));
-        writer.Write((byte)(Color.a * 128));
-        writer.Write(Length);
-        writer.Write(Alignment);
-        writer.Write((byte)(DropShadowColor.r * 255));
-        writer.Write((byte)(DropShadowColor.g * 255));
-        writer.Write((byte)(DropShadowColor.b * 255));
-        writer.Write((byte)(DropShadowColor.a * 128));
-        writer.Write(X);
-        writer.Write(Y);
-        writer.Write(ScaleX);
-        writer.Write(ScaleY);
-        writer.Write(DropShadowOffsetX);
-        writer.Write(DropShadowOffsetY);
-        writer.Write(Width);
-        writer.Write(Height);
-        writer.Write(EnableDropShadow);
-        writer.Write(Font);
-
-        var msgBytes = Encoding.UTF8.GetBytes(Message ?? "");
-        if (msgBytes.Length >= 64)
-        {
-            writer.Write(msgBytes, 0, 64);
-        }
-        else
-        {
-            writer.Write(msgBytes);
-            writer.Write(new byte[64 - msgBytes.Length]);
-        }
-
-        writer.Write(new byte[2]);
+        throw new NotImplementedException();
     }
 }
 
@@ -238,6 +204,9 @@ public class GameCommandDrawQuad : IGameCommand
     public Color Color2 { get; set; }
     public Color Color3 { get; set; }
     public float Fade { get; set; }
+    public uint Z { get; set; }
+    public bool ZWrite { get; set; }
+    public bool Draw { get; set; }
 
     public void Deserialize(BinaryReader reader, int size)
     {
@@ -256,43 +225,63 @@ public class GameCommandDrawQuad : IGameCommand
         Color2 = reader.ReadUInt32().RCRgbaToColor();
         Color3 = reader.ReadUInt32().RCRgbaToColor();
         Fade = reader.ReadSingle();
+        Z = reader.ReadUInt32();
+        ZWrite = reader.ReadBoolean();
+        Draw = reader.ReadBoolean();
+        reader.ReadBytes(6); // padding
     }
 
     public void Serialize(BinaryWriter writer)
     {
-        writer.Write(Point0.x);
-        writer.Write(Point0.y);
-        writer.Write(Point1.x);
-        writer.Write(Point1.y);
-        writer.Write(Point2.x);
-        writer.Write(Point2.y);
-        writer.Write(Point3.x);
-        writer.Write(Point3.y);
-        writer.Write(Using);
-        writer.Write(Icon);
-        writer.Write(Image.Address);
-        writer.Write(ShadowX);
-        writer.Write(ShadowY);
-        writer.Write((byte)(ShadowColor.r * 255));
-        writer.Write((byte)(ShadowColor.g * 255));
-        writer.Write((byte)(ShadowColor.b * 255));
-        writer.Write((byte)(ShadowColor.a * 128));
-        writer.Write((byte)(Color0.r * 255));
-        writer.Write((byte)(Color0.g * 255));
-        writer.Write((byte)(Color0.b * 255));
-        writer.Write((byte)(Color0.a * 128));
-        writer.Write((byte)(Color1.r * 255));
-        writer.Write((byte)(Color1.g * 255));
-        writer.Write((byte)(Color1.b * 255));
-        writer.Write((byte)(Color1.a * 128));
-        writer.Write((byte)(Color2.r * 255));
-        writer.Write((byte)(Color2.g * 255));
-        writer.Write((byte)(Color2.b * 255));
-        writer.Write((byte)(Color2.a * 128));
-        writer.Write((byte)(Color3.r * 255));
-        writer.Write((byte)(Color3.g * 255));
-        writer.Write((byte)(Color3.b * 255));
-        writer.Write((byte)(Color3.a * 128));
-        writer.Write(Fade);
+        throw new NotImplementedException();
+    }
+}
+
+public class GameCommandDrawWidget2D : IGameCommand
+{
+    public GameCommandIds Id => GameCommandIds.GAME_CMD_DRAW_WIDGET2D;
+    public RCPointer Positions { get; set; }
+    public RCPointer UVs { get; set; }
+    public RCPointer Colors { get; set; }
+    public RCPointer Polys { get; set; }
+    public short VertexCount { get; set; }
+    public short PrimCount { get; set; }
+    public byte PrimType { get; set; }
+    public byte Flags { get; set; }
+    public short FrameCount { get; set; }
+
+    public int X { get; set; }
+    public int Y { get; set; }
+    public float ScaleX { get; set; }
+    public float ScaleY { get; set; }
+    public float Theta { get; set; }
+    public Color Color { get; set; }
+    public float TFrame { get; set; }
+
+    public void Deserialize(BinaryReader reader, int size)
+    {
+        Positions = new RCPointer(reader.ReadUInt32());
+        UVs = new RCPointer(reader.ReadUInt32());
+        Colors = new RCPointer(reader.ReadUInt32());
+        Polys = new RCPointer(reader.ReadUInt32());
+        VertexCount = reader.ReadInt16();
+        PrimCount = reader.ReadInt16();
+        PrimType = reader.ReadByte();
+        Flags = reader.ReadByte();
+        FrameCount = reader.ReadInt16();
+        reader.ReadBytes(8);
+
+        X = reader.ReadInt32();
+        Y = reader.ReadInt32();
+        ScaleX = reader.ReadSingle();
+        ScaleY = reader.ReadSingle();
+        Theta = reader.ReadSingle();
+        Color = reader.ReadUInt32().RCRgbaToColor();
+        TFrame = reader.ReadSingle();
+    }
+
+    public void Serialize(BinaryWriter writer)
+    {
+        throw new NotImplementedException();
     }
 }

@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &2027663880788158457
+--- !u!1 &8030684450674743741
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,23 +8,23 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 3520813362993183281}
-  - component: {fileID: 8945978237440386269}
-  - component: {fileID: 738183242748502918}
+  - component: {fileID: 2172496688017058581}
+  - component: {fileID: 5672152268899063157}
+  - component: {fileID: 521333068714804952}
   m_Layer: 5
-  m_Name: UIQuadPrefab
+  m_Name: UIPolyPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!224 &3520813362993183281
+--- !u!224 &2172496688017058581
 RectTransform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2027663880788158457}
+  m_GameObject: {fileID: 8030684450674743741}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
@@ -37,24 +37,24 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0, y: 1}
---- !u!222 &8945978237440386269
+--- !u!222 &5672152268899063157
 CanvasRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2027663880788158457}
+  m_GameObject: {fileID: 8030684450674743741}
   m_CullTransparentMesh: 1
---- !u!114 &738183242748502918
+--- !u!114 &521333068714804952
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2027663880788158457}
+  m_GameObject: {fileID: 8030684450674743741}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e4da457e5e7b53e4bb4fed117ab25e09, type: 3}
+  m_Script: {fileID: 11500000, guid: b4c332c00ad6b4d479db0aff943459c1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
@@ -65,22 +65,11 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_ZWriteMaterial: {fileID: 2100000, guid: a14f5b19150b0154f8a21f972a0ef437, type: 2}
   m_Texture: {fileID: 0}
-  m_Point0: {x: 0, y: 0}
-  m_Point1: {x: 100, y: 0}
-  m_Point2: {x: 100, y: 100}
-  m_Point3: {x: 0, y: 100}
-  m_Color0: {r: 1, g: 1, b: 1, a: 1}
-  m_Color1: {r: 1, g: 1, b: 1, a: 1}
-  m_Color2: {r: 1, g: 1, b: 1, a: 1}
-  m_Color3: {r: 1, g: 1, b: 1, a: 1}
-  m_UV0: {x: 0, y: 1}
-  m_UV1: {x: 1, y: 1}
-  m_UV2: {x: 0, y: 0}
-  m_UV3: {x: 1, y: 0}
-  m_ShadowColor: {r: 0, g: 0, b: 0, a: 1}
-  m_ShadowOffset: {x: 0, y: 0}
-  Using: 0
-  ZWrite: 0
-  Draw: 0
+  PolyLen: 3
+  LineWidth: 2.410714
+  m_Vertices: []
+  m_UVs: []
+  m_Colors: []
+  m_Indices: []
+  ConnectSegments: 1
