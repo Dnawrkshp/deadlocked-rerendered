@@ -211,8 +211,8 @@ void hook_OnFontPrint(float x, float y, u64 rgba, char* s, int length, float sca
   cmd.DropShadowXOffset = dropShadowXOffset;
   cmd.DropShadowYOffset = dropShadowYOffset;
   cmd.Font = PEEK_I8(0x0021dec4);
-  cmd.Width = FontStringLength(s, length, 1);
-  cmd.Height = FontStringHeight(s, length, 1);
+  cmd.Width = FontStringLength(s, length, scaleX);
+  cmd.Height = FontStringHeight(s, length, scaleY);
 
   if (s) {
     strncpy(cmd.Message, s, sizeof(cmd.Message));

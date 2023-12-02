@@ -5,10 +5,7 @@ Windows only atm.
 
 # Screenshots
 Main Menu
-![main menu](./screenshots/mainmenu.png)
-
-Load Save
-![main menu](./screenshots/loadsave.png)
+![main menu](./screenshots/mainmenu.gif)
 
 # Building
 1. Install the dependencies

@@ -149,37 +149,24 @@ namespace UI
                             textElement.text = drawTextCmd.Message.ConvertRCStringToRichString();
                             textElement.color = drawTextCmd.Color;
 
-                            float width = drawTextCmd.Width;
-                            float height = drawTextCmd.Height;
-
                             var scale = Canvas.GetRatchetScreenSpaceToUnityScreenSpaceRatio();
                             var rectTransform = textElement.GetComponent<RectTransform>();
 
                             switch (drawTextCmd.Alignment % 3)
                             {
-                                case 0:
-                                    //tmp.horizontalAlignment = TMPro.HorizontalAlignmentOptions.Left;
-                                    //rectTransform.pivot = new Vector2(0, 1);
-                                    break;
-                                case 1:
-                                    //tmp.horizontalAlignment = TMPro.HorizontalAlignmentOptions.Center;
-                                    drawTextCmd.X -= width * 0.5f;
-                                    //rectTransform.pivot = new Vector2(0.5f, 1);
-                                    break;
-                                case 2:
-                                    //tmp.horizontalAlignment = TMPro.HorizontalAlignmentOptions.Right;
-                                    drawTextCmd.X -= width;
-                                    //rectTransform.pivot = new Vector2(1f, 1);
-                                    break;
+                                case 0: break;
+                                case 1: drawTextCmd.X -= drawTextCmd.Width * 0.5f; break;
+                                case 2: drawTextCmd.X -= drawTextCmd.Width; break;
                             }
 
                             switch (drawTextCmd.Alignment / 3)
                             {
-                                case 1: textElement.verticalAlignment = TMPro.VerticalAlignmentOptions.Middle; drawTextCmd.Y -= drawTextCmd.Height * 0.5f; break;
-                                case 2: textElement.verticalAlignment = TMPro.VerticalAlignmentOptions.Bottom; drawTextCmd.Y -= drawTextCmd.Height; break;
+                                case 0: break;
+                                case 1: drawTextCmd.Y -= drawTextCmd.Height * 0.5f; break;
+                                case 2: drawTextCmd.Y -= drawTextCmd.Height; break;
                             }
 
-                            rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width * scale.x);
+                            //rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width * scale.x);
                             //rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height * scale);
                             rectTransform.anchoredPosition = new Vector2(drawTextCmd.X * scale.x * PostScale.x, drawTextCmd.Y * -scale.y * PostScale.y); //Canvas.RatchetScreenSpaceToUnityScreenSpace(drawTextCmd.X, drawTextCmd.Y);
                             rectTransform.localScale = new Vector3(drawTextCmd.ScaleX, drawTextCmd.ScaleY, 1);
