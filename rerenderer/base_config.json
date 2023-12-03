@@ -1,5 +1,6 @@
 {
   "IsoPath": "C:\\path\\to\\deadlocked.iso",
+  "GameDataPath": "gamedata",
   "Emulator": {
     "BiosFolder": "C:\\path\\to\\bios\\folder\\",
     "BiosFilename": "bios_filename.bin"

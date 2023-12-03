@@ -74,5 +74,6 @@ crashlytics-build.properties
 
 # User Configuration
 /rerenderer/emuqt/
+/rerenderer/gamedata/
 /rerenderer/config.json
 .vscode/

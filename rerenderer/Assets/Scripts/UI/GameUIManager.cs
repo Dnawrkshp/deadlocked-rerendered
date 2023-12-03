@@ -26,7 +26,7 @@ namespace UI
         private int currentQuadElementIdx = 0;
         private int currentWidget2DElementIdx = 0;
         private int currentZClearElementIdx = 0;
-        private bool lastQuadWasZWrite = false;
+        private bool lastElementHadZWrite = false;
         private Queue<IGameCommand> commandQueue = new Queue<IGameCommand>();
 
         private void Start()
@@ -41,6 +41,8 @@ namespace UI
 
         private void OnCommand(IGameCommand cmd)
         {
+            if (!this.enabled) return;
+
             switch (cmd)
             {
                 case GameCommandOnTickEnd:
@@ -71,73 +73,26 @@ namespace UI
                         {
                             if (!Widget2DPrefab) break;
 
-                            var bytesPerPrim = drawWidget2DCmd.PrimType == 1 ? 2 : 4;
-
-                            // read arrays from emu
-                            var bytesPositions = EmuInterop.ReadBytes(drawWidget2DCmd.Positions.Address, drawWidget2DCmd.VertexCount * 2 * sizeof(short));
-                            if (bytesPositions == null) break;
-                            var bytesUVs = EmuInterop.ReadBytes(drawWidget2DCmd.UVs.Address, drawWidget2DCmd.VertexCount * 2 * sizeof(short));
-                            if (bytesUVs == null) break;
-                            var bytesColors = EmuInterop.ReadBytes(drawWidget2DCmd.Colors.Address, drawWidget2DCmd.VertexCount * sizeof(int));
-                            if (bytesColors == null) break;
-                            var bytesPrims = EmuInterop.ReadBytes(drawWidget2DCmd.Polys.Address, drawWidget2DCmd.PrimCount * bytesPerPrim);
-                            if (bytesPrims == null) break;
-
-                            // get pointers to array
-                            short* pPositions = (short*)bytesPositions.Value.Ref();
-                            short* pUVs = (short*)bytesUVs.Value.Ref();
-                            uint* pColors = (uint*)bytesColors.Value.Ref();
-                            byte* pPrims = (byte*)bytesPrims.Value.Ref();
+                            if (drawWidget2DCmd.Vu1DrawState.ZWrite && !lastElementHadZWrite)
+                                GetOrCreateFreeZClearElement();
 
                             var polyElement = GetOrCreateFreeWidget2DElement();
-                            var rectTransform = polyElement.GetComponent<RectTransform>();
-                            polyElement.PolyLen = bytesPerPrim;
+                            polyElement.PopulateFrom(Canvas, drawWidget2DCmd);
 
-                            // build list of vertices/colors/uvs
-                            for (int i = 0; i < drawWidget2DCmd.VertexCount; i++)
-                            {
-                                polyElement.m_Vertices.Add(Canvas.RatchetScreenSpaceToUnityScreenSpace(pPositions[i * 2 + 0] / 16f, pPositions[i * 2 + 1] / 16f));
-                                polyElement.m_UVs.Add(Vector2.zero);
-                                polyElement.m_Colors.Add(drawWidget2DCmd.Color);
-                            }
-
-                            // build list of indices
-                            for (int i = 0; i < drawWidget2DCmd.PrimCount; i++)
-                            {
-                                switch (drawWidget2DCmd.PrimType)
-                                {
-                                    case 0: // quad
-                                        {
-                                            polyElement.m_Indices.Add(new PolyElement.Poly(pPrims[i * 4 + 0], pPrims[i * 4 + 1], pPrims[i * 4 + 2], pPrims[i * 4 + 3]));
-                                            break;
-                                        }
-                                    case 1: // line
-                                        {
-                                            polyElement.m_Indices.Add(new PolyElement.Poly(pPrims[i * 2 + 0], pPrims[i * 2 + 1]));
-                                            break;
-                                        }
-                                    default: throw new NotImplementedException();
-                                }
-                            }
-
-                            rectTransform.anchoredPosition = Canvas.RatchetScreenSpaceToUnityScreenSpace(drawWidget2DCmd.X, drawWidget2DCmd.Y);
-                            rectTransform.localScale = new Vector3(drawWidget2DCmd.ScaleX, drawWidget2DCmd.ScaleY, 1);
-                            polyElement.Dirty();
+                            lastElementHadZWrite = polyElement.m_ZWrite;
                             break;
                         }
                     case GameCommandDrawQuad drawQuadCmd:
                         {
                             if (!QuadPrefab) break;
 
-                            if (drawQuadCmd.ZWrite && !lastQuadWasZWrite)
-                            {
+                            if (drawQuadCmd.Vu1DrawState.ZWrite && !lastElementHadZWrite)
                                 GetOrCreateFreeZClearElement();
-                            }
 
                             var quadElement = GetOrCreateFreeQuadElement();
                             quadElement.PopulateFrom(Canvas, drawQuadCmd);
 
-                            lastQuadWasZWrite = quadElement.ZWrite;
+                            lastElementHadZWrite = quadElement.m_ZWrite;
                             break;
                         }
                     case GameCommandDrawText drawTextCmd:
@@ -145,30 +100,12 @@ namespace UI
                             if (!TextPrefab) break;
 
                             var textElement = GetOrCreateFreeTextElement();
-
                             textElement.text = drawTextCmd.Message.ConvertRCStringToRichString();
                             textElement.color = drawTextCmd.Color;
+                            textElement.SetClippingRectFromSwizzle(drawTextCmd.Vu1DrawState.Scissor);
 
-                            var scale = Canvas.GetRatchetScreenSpaceToUnityScreenSpaceRatio();
                             var rectTransform = textElement.GetComponent<RectTransform>();
-
-                            switch (drawTextCmd.Alignment % 3)
-                            {
-                                case 0: break;
-                                case 1: drawTextCmd.X -= drawTextCmd.Width * 0.5f; break;
-                                case 2: drawTextCmd.X -= drawTextCmd.Width; break;
-                            }
-
-                            switch (drawTextCmd.Alignment / 3)
-                            {
-                                case 0: break;
-                                case 1: drawTextCmd.Y -= drawTextCmd.Height * 0.5f; break;
-                                case 2: drawTextCmd.Y -= drawTextCmd.Height; break;
-                            }
-
-                            //rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width * scale.x);
-                            //rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height * scale);
-                            rectTransform.anchoredPosition = new Vector2(drawTextCmd.X * scale.x * PostScale.x, drawTextCmd.Y * -scale.y * PostScale.y); //Canvas.RatchetScreenSpaceToUnityScreenSpace(drawTextCmd.X, drawTextCmd.Y);
+                            rectTransform.anchoredPosition = Canvas.RatchetScreenSpaceToUnityPixelSpace(drawTextCmd.X, drawTextCmd.Y);
                             rectTransform.localScale = new Vector3(drawTextCmd.ScaleX, drawTextCmd.ScaleY, 1);
                             break;
                         }

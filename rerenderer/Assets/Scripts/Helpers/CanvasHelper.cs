@@ -1,29 +1,34 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public static class CanvasHelper
 {
-    public static Vector2 GetRatchetScreenSpaceToUnityScreenSpaceRatio(this Canvas canvas)
+    public static Vector2 RatchetScreenSpaceToUnityPixelSpace(this Canvas canvas, float x, float y)
     {
-        var ratio = (canvas.pixelRect.height / Constants.UI_SCREEN_HEIGHT) / canvas.scaleFactor;
-        return new Vector2(ratio * (Constants.UI_SCREEN_WIDTH / Constants.SCREEN_WIDTH), ratio);
+        var bh = canvas.pixelRect.height / canvas.scaleFactor;
+        var bw = bh * (Constants.SCREEN_WIDTH / Constants.SCREEN_HEIGHT);
+
+        return new Vector2(x * bw, -y * bh);
     }
 
-    public static Vector2 RatchetTextSpaceToUnityScreenSpace(this Canvas canvas, float ratchetX, float ratchetY)
+    public static void SetClippingRectFromSwizzle(this MaskableGraphic graphic, Vector4 scissor)
     {
-        var scale = canvas.GetRatchetScreenSpaceToUnityScreenSpaceRatio();
-        return new Vector2(ratchetX * scale.x, -ratchetY * scale.y);
-    }
+        var bh = graphic.canvas.pixelRect.height / graphic.canvas.scaleFactor;
+        var bw = bh * (Constants.SCREEN_WIDTH / Constants.SCREEN_HEIGHT);
 
-    public static Vector2 RatchetScreenSpaceToUnityScreenSpace(this Canvas canvas, float ratchetX, float ratchetY)
-    {
-        var scale = canvas.GetRatchetScreenSpaceToUnityScreenSpaceRatio();
-        return new Vector2(ratchetX * scale.x, -ratchetY * scale.y);
-    }
+        var width = scissor.y - scissor.x;
+        var height = scissor.w - scissor.z;
+        var x = scissor.x * bw;
+        var y = (1 - scissor.w) * bh;
 
-    public static Vector2 RatchetRelativeScreenSpaceToUnityScreenSpace(this Canvas canvas, float ratchetRelX, float ratchetRelY)
-    {
-        return RatchetScreenSpaceToUnityScreenSpace(canvas, ratchetRelX * Constants.SCREEN_WIDTH, ratchetRelY * Constants.UI_SCREEN_HEIGHT);
+        var r = new Rect();
+        r.x = (-bw * 0.5f) + x;
+        r.y = (-bh * 0.5f) + y;
+        r.width = bw * width;
+        r.height = bh * height;
+
+        graphic.canvasRenderer.EnableRectClipping(r);
     }
 }

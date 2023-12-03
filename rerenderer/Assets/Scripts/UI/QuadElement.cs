@@ -1,13 +1,12 @@
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using static RCHelper;
 
 // adapted from https://www.hallgrimgames.com/blog/2018/11/25/custom-unity-ui-meshes
 
 public class QuadElement : MaskableGraphic
 {
-    public Material m_ZWriteMaterial;
-
     public Texture m_Texture;
     public Vector2 m_Point0 = Vector2.zero;
     public Vector2 m_Point1 = Vector2.right;
@@ -23,9 +22,12 @@ public class QuadElement : MaskableGraphic
     public Vector2 m_UV3 = Vector2.up;
     public Color m_ShadowColor = Color.black;
     public Vector2 m_ShadowOffset = Vector2.zero;
-    public UsingFlags Using;
-    public bool ZWrite;
-    public bool Draw;
+    public UsingFlags m_Using;
+    public int m_TexId;
+    public bool m_ZWrite;
+    public bool m_Draw;
+    public GS_ZTEST m_ZTest;
+    public Vector4 m_Scissor = new Vector4(0, 1, 0, 1);
 
     [Flags]
     public enum UsingFlags
@@ -37,19 +39,24 @@ public class QuadElement : MaskableGraphic
         COLOR = 8,
     }
 
+#if UNITY_EDITOR
+    protected override void OnValidate()
+    {
+        Dirty();
+    }
+#endif
+
     protected override void OnRectTransformDimensionsChange()
     {
         base.OnRectTransformDimensionsChange();
-        SetVerticesDirty();
-        SetMaterialDirty();
+        Dirty();
     }
 
     public void Dirty()
     {
-        if (ZWrite && this.material != m_ZWriteMaterial)
-            this.material = m_ZWriteMaterial;
-        else if (!ZWrite && this.material == m_ZWriteMaterial)
-            this.material = null;
+        var mat = GameMat.GetUIMaterial(m_ZWrite, m_ZTest);
+        if (this.material != mat)
+            this.material = mat;
 
         SetVerticesDirty();
         SetMaterialDirty();
@@ -69,11 +76,11 @@ public class QuadElement : MaskableGraphic
         // translate to unity screen space
         // set ui element position to midpoint
         // set vertex positions relative to midpoint
-        var p0 = canvas.RatchetRelativeScreenSpaceToUnityScreenSpace(drawQuadCmd.Point0.x, drawQuadCmd.Point0.y);
-        var p1 = canvas.RatchetRelativeScreenSpaceToUnityScreenSpace(drawQuadCmd.Point1.x, drawQuadCmd.Point1.y);
-        var p2 = canvas.RatchetRelativeScreenSpaceToUnityScreenSpace(drawQuadCmd.Point2.x, drawQuadCmd.Point2.y);
-        var p3 = canvas.RatchetRelativeScreenSpaceToUnityScreenSpace(drawQuadCmd.Point3.x, drawQuadCmd.Point3.y);
-        var oS = canvas.RatchetRelativeScreenSpaceToUnityScreenSpace(drawQuadCmd.ShadowX, drawQuadCmd.ShadowY);
+        var p0 = canvas.RatchetScreenSpaceToUnityPixelSpace(drawQuadCmd.Point0.x, drawQuadCmd.Point0.y);
+        var p1 = canvas.RatchetScreenSpaceToUnityPixelSpace(drawQuadCmd.Point1.x, drawQuadCmd.Point1.y);
+        var p2 = canvas.RatchetScreenSpaceToUnityPixelSpace(drawQuadCmd.Point2.x, drawQuadCmd.Point2.y);
+        var p3 = canvas.RatchetScreenSpaceToUnityPixelSpace(drawQuadCmd.Point3.x, drawQuadCmd.Point3.y);
+        var oS = canvas.RatchetScreenSpaceToUnityPixelSpace(drawQuadCmd.ShadowX, drawQuadCmd.ShadowY);
 
         var midpoint = (p0 + p1 + p2 + p3) / 4;
         rectTransform.anchoredPosition = midpoint;
@@ -89,12 +96,15 @@ public class QuadElement : MaskableGraphic
         m_ShadowOffset = oS;
         m_ShadowColor = drawQuadCmd.ShadowColor;
         m_Texture = null;
-        Using = (QuadElement.UsingFlags)drawQuadCmd.Using;
-        ZWrite = drawQuadCmd.ZWrite;
-        Draw = drawQuadCmd.Draw;
+        m_TexId = drawQuadCmd.Icon;
+        m_Using = (QuadElement.UsingFlags)drawQuadCmd.Using;
+        m_ZWrite = drawQuadCmd.Vu1DrawState.ZWrite;
+        m_Draw = drawQuadCmd.Vu1DrawState.Draw;
+        m_ZTest = drawQuadCmd.Vu1DrawState.ZTest;
+        m_Scissor = drawQuadCmd.Vu1DrawState.Scissor;
 
         // no color
-        if (!Using.HasFlag(UsingFlags.COLOR))
+        if (!m_Using.HasFlag(UsingFlags.COLOR))
         {
             m_Color0 = Color.gray;
             m_Color1 = Color.gray;
@@ -103,14 +113,18 @@ public class QuadElement : MaskableGraphic
         }
 
         // texture
-        if (Using.HasFlag(UsingFlags.TEXTURE))
+        if (m_Using.HasFlag(UsingFlags.TEXTURE))
         {
             // lookup texture
-            // drawQuadCmd.Icon
+            if (drawQuadCmd.Image.HasValue())
+                m_Texture = GamePIF.GetPIFTex(drawQuadCmd.Image);
+
+            if (!m_Texture && m_TexId > 0)
+                m_Texture = GameTex.GetEffectTex(m_TexId);
         }
         
         // fade
-        if (Using.HasFlag(UsingFlags.FADE))
+        if (m_Using.HasFlag(UsingFlags.FADE))
         {
             m_Color0.a *= drawQuadCmd.Fade;
             m_Color1.a *= drawQuadCmd.Fade;
@@ -134,17 +148,17 @@ public class QuadElement : MaskableGraphic
         //if (Using.HasFlag(UsingFlags.FADE))
         //    return;
 
-        if (Using.HasFlag(UsingFlags.DRAW_SHADOW))
+        if (m_Using.HasFlag(UsingFlags.DRAW_SHADOW))
             AddShadowQuad(vh);
 
         AddQuad(vh);
 
-
+        this.SetClippingRectFromSwizzle(m_Scissor);
     }
 
-    private Vector2 GetUV1()
+    private Vector4 GetUV1()
     {
-        return new Vector2(ZWrite ? 1 : 0, Draw ? 1 : 0);
+        return new Vector4(m_ZWrite ? 1 : 0, m_Draw ? 0 : 1, m_Texture ? 1 : 0);
     }
 
     private void AddQuad(VertexHelper vh)

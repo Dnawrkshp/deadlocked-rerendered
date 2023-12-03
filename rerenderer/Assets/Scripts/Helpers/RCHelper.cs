@@ -10,6 +10,122 @@ using UnityEngine.SceneManagement;
 
 public static class RCHelper
 {
+    public enum GameVersion
+    {
+        DEADLOCKED_NTSC = 0,
+        GLADIATOR_PAL = 1,
+    }
+
+    #region MATH3D
+
+    public static Vector3 SwizzleXZY(this Vector3 vector)
+    {
+        return new Vector3(vector.x, vector.z, vector.y);
+    }
+
+    public static Vector4 SwizzleXZY(this Vector4 vector)
+    {
+        return new Vector4(vector.x, vector.z, vector.y, vector.w);
+    }
+
+    public static Matrix4x4 SwizzleXZY(this Matrix4x4 matrix)
+    {
+        return new Matrix4x4(
+            new Vector4(matrix.m00, matrix.m20, matrix.m10, matrix.m30),
+            new Vector4(matrix.m02, matrix.m22, matrix.m12, matrix.m32),
+            new Vector4(matrix.m01, matrix.m21, matrix.m11, matrix.m31),
+            new Vector4(matrix.m03, matrix.m23, matrix.m13, matrix.m33)
+            );
+    }
+
+    public static Matrix4x4 RCMatrixToMatrix(this Matrix4x4 matrix)
+    {
+        var mXZY = matrix.SwizzleXZY().Safe();
+
+        return Matrix4x4.TRS(mXZY.GetPosition(), matrix.RCMatrixToQuaternion(), mXZY.lossyScale);
+    }
+
+    public static Matrix4x4 Safe(this Matrix4x4 matrix)
+    {
+        float det = matrix.determinant;
+        if (Mathf.Abs(det) > 1E-20)
+            return matrix;
+
+        return Matrix4x4.TRS(matrix.GetPosition(), Quaternion.identity, Vector3.one * 1E-20f);
+    }
+
+    public static Quaternion RCEulerToQuaternion(this Vector3 rcEuler)
+    {
+        var transformed = new Vector3(rcEuler.x, rcEuler.z - (Mathf.PI / 2f), rcEuler.y) * -Mathf.Rad2Deg;
+        return Quaternion.Euler(transformed);
+    }
+
+    public static Quaternion RCEulerToQuaternion(this Vector4 rcEuler)
+    {
+        return ((Vector3)rcEuler).RCEulerToQuaternion();
+    }
+
+    public static Quaternion RCMatrixToQuaternion(this Matrix4x4 rcMatrix)
+    {
+        var rotation = Quaternion.identity;
+        var mXZY = rcMatrix.SwizzleXZY();
+        if (rcMatrix.ValidTRS())
+            rotation = mXZY.rotation;
+        else
+            rotation = Quaternion.LookRotation(mXZY.MultiplyVector(Vector3.forward), mXZY.MultiplyVector(Vector3.up));
+
+        return rotation * Quaternion.Euler(0, 180, 0);
+    }
+
+    #endregion
+
+    #region Color
+
+    public static unsafe Color RCRgbaToColor(this int rgba)
+    {
+        byte* p = (byte*)&rgba;
+
+        return new Color(p[0] / 255.0f, p[1] / 255.0f, p[2] / 255.0f, p[3] / 128.0f);
+    }
+
+    public static unsafe Color RCRgbaToColor(this uint rgba)
+    {
+        byte* p = (byte*)&rgba;
+
+        return new Color(p[0] / 255.0f, p[1] / 255.0f, p[2] / 255.0f, p[3] / 128.0f);
+    }
+
+    public static unsafe void RCLightsToLighting(this ulong lights, out Vector3 direction, out Color color)
+    {
+        byte* p = (byte*)&lights;
+
+        color = ((uint)(lights >> 32)).RCRgbaToColor();
+        direction = new Vector3(0, 1, 1);
+    }
+
+    #endregion
+
+    #region Moby
+
+    public static bool IsDestroyed(this MobyInstance mobyInstance)
+    {
+        return mobyInstance.state <= -2;
+    }
+
+    public static bool IsDynamicDestroyed(this MobyInstance mobyInstance)
+    {
+        return mobyInstance.state == -2;
+    }
+
+    public static bool IsStaticDestroyed(this MobyInstance mobyInstance)
+    {
+        return mobyInstance.state == -3;
+    }
+
+    #endregion
+
+    #region String
+
     public static readonly Dictionary<uint, char> DEADLOCKED_EXTENDED_ASCII_REMAP = new Dictionary<uint, char>()
     {
         { 0x02, '¡' },
@@ -93,102 +209,6 @@ public static class RCHelper
         // { 0x50, 'black line' },
     };
 
-    public static Vector3 SwizzleXZY(this Vector3 vector)
-    {
-        return new Vector3(vector.x, vector.z, vector.y);
-    }
-
-    public static Vector4 SwizzleXZY(this Vector4 vector)
-    {
-        return new Vector4(vector.x, vector.z, vector.y, vector.w);
-    }
-
-    public static Matrix4x4 SwizzleXZY(this Matrix4x4 matrix)
-    {
-        return new Matrix4x4(
-            new Vector4(matrix.m00, matrix.m20, matrix.m10, matrix.m30),
-            new Vector4(matrix.m02, matrix.m22, matrix.m12, matrix.m32),
-            new Vector4(matrix.m01, matrix.m21, matrix.m11, matrix.m31),
-            new Vector4(matrix.m03, matrix.m23, matrix.m13, matrix.m33)
-            );
-    }
-
-    public static Matrix4x4 RCMatrixToMatrix(this Matrix4x4 matrix)
-    {
-        var mXZY = matrix.SwizzleXZY().Safe();
-
-        return Matrix4x4.TRS(mXZY.GetPosition(), matrix.RCMatrixToQuaternion(), mXZY.lossyScale);
-    }
-
-    public static Matrix4x4 Safe(this Matrix4x4 matrix)
-    {
-        float det = matrix.determinant;
-        if (Mathf.Abs(det) > 1E-20)
-            return matrix;
-
-        return Matrix4x4.TRS(matrix.GetPosition(), Quaternion.identity, Vector3.one * 1E-20f);
-    }
-
-    public static Quaternion RCEulerToQuaternion(this Vector3 rcEuler)
-    {
-        var transformed = new Vector3(rcEuler.x, rcEuler.z - (Mathf.PI / 2f), rcEuler.y) * -Mathf.Rad2Deg;
-        return Quaternion.Euler(transformed);
-    }
-
-    public static Quaternion RCEulerToQuaternion(this Vector4 rcEuler)
-    {
-        return ((Vector3)rcEuler).RCEulerToQuaternion();
-    }
-
-    public static Quaternion RCMatrixToQuaternion(this Matrix4x4 rcMatrix)
-    {
-        var rotation = Quaternion.identity;
-        var mXZY = rcMatrix.SwizzleXZY();
-        if (rcMatrix.ValidTRS())
-            rotation = mXZY.rotation;
-        else
-            rotation = Quaternion.LookRotation(mXZY.MultiplyVector(Vector3.forward), mXZY.MultiplyVector(Vector3.up));
-
-        return rotation * Quaternion.Euler(0, 180, 0);
-    }
-
-    public static unsafe Color RCRgbaToColor(this int rgba)
-    {
-        byte* p = (byte*)&rgba;
-
-        return new Color(p[0] / 255.0f, p[1] / 255.0f, p[2] / 255.0f, p[3] / 128.0f);
-    }
-
-    public static unsafe Color RCRgbaToColor(this uint rgba)
-    {
-        byte* p = (byte*)&rgba;
-
-        return new Color(p[0] / 255.0f, p[1] / 255.0f, p[2] / 255.0f, p[3] / 128.0f);
-    }
-
-    public static unsafe void RCLightsToLighting(this ulong lights, out Vector3 direction, out Color color)
-    {
-        byte* p = (byte*)&lights;
-
-        color = ((uint)(lights >> 32)).RCRgbaToColor();
-        direction = new Vector3(0, 1, 1);
-    }
-
-    public static bool IsDestroyed(this MobyInstance mobyInstance)
-    {
-        return mobyInstance.state <= -2;
-    }
-
-    public static bool IsDynamicDestroyed(this MobyInstance mobyInstance)
-    {
-        return mobyInstance.state == -2;
-    }
-
-    public static bool IsStaticDestroyed(this MobyInstance mobyInstance)
-    {
-        return mobyInstance.state == -3;
-    }
-    
     public static string ConvertRCStringToRichString(this string rcString)
     {
         if (rcString == null)
@@ -308,6 +328,10 @@ public static class RCHelper
         return sb.ToString();
     }
 
+    #endregion
+
+    #region Misc
+
     public static bool HasValue(this RCPointer rcPointer)
     {
         return rcPointer.Address != 0;
@@ -315,12 +339,38 @@ public static class RCHelper
 
     public static bool IsRunningDeadlocked()
     {
-        // todo: add gladiator mastercode
-        var magic = EmuInterop.ReadInt32(0x0013BA48);
-        return magic == 0x00832021;
+        return GetRunningGame() == GameVersion.DEADLOCKED_NTSC;
     }
 
-    static (int x, int y) remap_pixel_index_rac4(int x, int y, int width)
+    public static GameVersion? GetRunningGame()
+    {
+        // deadlocked master code
+        if (EmuInterop.ReadInt32(0x0013BA48) == 0x00832021) return GameVersion.DEADLOCKED_NTSC;
+
+        // todo: add gladiator mastercode
+
+
+        return null;
+    }
+
+    #endregion
+
+    #region Game
+
+    public static int? GetCurrentLevel()
+    {
+        switch (GetRunningGame())
+        {
+            case GameVersion.DEADLOCKED_NTSC: return EmuInterop.ReadInt32(0x00172160 + 0x198);
+            default: return null;
+        }
+    }
+
+    #endregion
+
+    #region Texture
+
+    public static (int x, int y) RemapPixelIndexRC4(int x, int y, int width)
     {
         var i = (y * width) + x;
 
@@ -350,10 +400,47 @@ public static class RCHelper
         x = n + ((m + q * 4) * 4);
         y = r + (o * 2);
 
-        return ((x%width), y);
+        return ((x % width), y);
     }
 
-    static byte decode_palette_index(byte index, int high = 4, int low = 3)
+    public static int RemapPixelIndexRC4(int i, int width)
+    {
+        int s = i / (width * 2);
+        int r = 0;
+        if (s % 2 == 0)
+            r = s * 2;
+        else
+            r = (s - 1) * 2 + 1;
+
+        int q = ((i % (width * 2)) / 32);
+
+        int m = i % 4;
+        int n = (i / 4) % 4;
+        int o = i % 2;
+        int p = (i / 16) % 2;
+
+        if ((s / 2) % 2 == 1)
+            p = 1 - p;
+
+        if (o == 0)
+            m = (m + p) % 4;
+        else
+            m = ((m - p) + 4) % 4;
+
+
+        int x = n + ((m + q * 4) * 4);
+        int y = r + (o * 2);
+
+        return (x % width) + (y * width);
+    }
+
+    public static int RemapPixelIndexFlipY(int i, int width, int height)
+    {
+        var y = height - (i / width) - 1;
+        return (i % width) + (y * width);
+    }
+
+    public static byte DecodePaletteIndex(byte index, int high = 4, int low = 3)
     {
         int dif = high - low;
         uint mask1 = (uint)1 << high;
@@ -363,4 +450,19 @@ public static class RCHelper
 
         return (byte)(((index & mask1) >> dif) | ((index & mask2) << dif) | a);
     }
+
+    #endregion
+
+    #region HW
+
+    public enum GS_ZTEST
+    {
+        ZNOUSE = 0,
+        ZALWAYS = 1,
+        ZGEQUAL = 2,
+        ZGREATER = 3
+    };
+
+    #endregion
+
 }

@@ -26,6 +26,7 @@ public static class EmuInterop
     static uint? _emuProcessId = null;
     static ProcessMemory _emuMem = null;
     static Stopwatch _sw = Stopwatch.StartNew();
+    static double _lastWaitForFrameTime = _sw.Elapsed.TotalSeconds;
     static long _emuMemoryOffset = 0;
     static long _emuBackbufferMemoryOffset = 0;
     static readonly object _cacheLockObject = new object();
@@ -421,8 +422,12 @@ public static class EmuInterop
 
     public static bool WaitForFrame()
     {
-        var startTime = _sw.Elapsed.TotalSeconds;
         var startTimeMs = _sw.ElapsedMilliseconds;
+
+        // sometimes unity will run multiple physics updates sequentially to try and catch up on lost updates (due to lag or OS throttling)
+        // we don't want to wait on the emu to finish another tick if we're catching up
+        if ((_sw.Elapsed.TotalSeconds - _lastWaitForFrameTime) < Time.fixedDeltaTime)
+            return _tickQueued;
 
         // wait for frame to finish processing
         var pine = GetPINE();
@@ -435,25 +440,16 @@ public static class EmuInterop
             // when one tick takes longer than it should, causing the next FixedUpdate
             // to loop until the game catches up
             // which won't happen until the tick time returns to sub 16ms
-            if ((_sw.ElapsedMilliseconds - startTimeMs) >= 4)
+            if ((_sw.ElapsedMilliseconds - startTimeMs) >= 16)
             {
                 //UnityEngine.Debug.Log($"waitforframe safe timedout {Time.time}");
                 //SnackManager.AddSnack($"waitforframe safe timedout {Time.time}");
+                _lastWaitForFrameTime = _sw.Elapsed.TotalSeconds;
                 return false;
             }
-
-#if UNITY_EDITOR && false
-            _pine.Value.GetStatus().TryGetResult(out _);
-#else
-            if ((_sw.Elapsed.TotalSeconds - startTime) > 10)
-            {
-                UnityEngine.Debug.Log("waitforframe timedout");
-                Dispose();
-                break;
-            }
-#endif
         }
 
+        _lastWaitForFrameTime = _sw.Elapsed.TotalSeconds;
         return true;
     }
 

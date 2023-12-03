@@ -180,7 +180,7 @@ public class PostInterop : MonoBehaviour
         //if (EmuInterop.GetStatus().TryGetResult(out var status) && status.Code != IPCStatusCode.Running)
         //    return;
 
-        if (!RCHelper.IsRunningDeadlocked())
+        if (!RCHelper.GetRunningGame().HasValue)
             return;
 
         // wait for hook to be correct value

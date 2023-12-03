@@ -34,6 +34,8 @@ struct Config config __attribute__((section(".config"))) = {
   
 };
 
+u64 vu1GsRegisters[0x80];
+
 #if DEBUG
 
 //--------------------------------------------------------------------------
@@ -63,6 +65,69 @@ int isInputKBM(void)
 }
 
 //--------------------------------------------------------------------------
+void getVu1DrawState(struct Vu1DrawState *state)
+{
+  if (!state) return;
+
+  float canvasX = GetCanvasToScreenX();
+  float canvasY = GetCanvasToScreenY();
+  u16 scissorLeft = (vu1GsRegisters[0x40] >> 00) & 0xffff;
+  u16 scissorRight = (vu1GsRegisters[0x40] >> 16) & 0xffff;
+  u16 scissorTop = (vu1GsRegisters[0x40] >> 32) & 0xffff;
+  u16 scissorBottom = (vu1GsRegisters[0x40] >> 48) & 0xffff;
+
+  state->ScissorLeft = (short)((scissorLeft / canvasX) * 16384.0);
+  state->ScissorRight = (short)((scissorRight / canvasX) * 16384.0);
+  state->ScissorTop = (short)((scissorTop / canvasY) * 16384.0);
+  state->ScissorBottom = (short)((scissorBottom / canvasY) * 16384.0);
+
+  state->ZWrite = (vu1GsRegisters[0x4E] >> 32) == 0; // ZBUF_1 zmsk
+  state->Draw = (vu1GsRegisters[0x4C] >> 32) == 0;   // FRAME_1 
+  state->ZTest = (vu1GsRegisters[0x47] >> 17) & 0x3;  // TEST_1 ztst
+  state->Alpha = (vu1GsRegisters[0x4C] >> 32);  // ALPHA_1
+}
+
+//--------------------------------------------------------------------------
+void hook_OnVU1SetScissor(int left, int right, int top, int bottom)
+{
+  // get hooked func
+  VU1SetScissor_f vu1SetScissorFunc = (VU1SetScissor_f)GetOverlayAddress((void**)&VU1SetScissor_lookup);
+  if (!vu1SetScissorFunc) return;
+
+  // remove hook so we can call base
+  hookerRestoreFunctionEntrypoint(HOOK_ID_VU1_SET_SCISSOR, vu1SetScissorFunc);
+
+  // store in SCISSOR_1
+  vu1GsRegisters[0x40] = ((u64)(left & 0xffff)) | ((u64)(right & 0xffff) << 16) | ((u64)(top & 0xffff) << 32) | ((u64)(bottom & 0xffff) << 48);
+  
+  // call base
+  vu1SetScissorFunc(left, right, top, bottom);
+
+  // reinstall hook
+  hookerInstallFunctionEntrypoint(HOOK_ID_VU1_SET_SCISSOR, GetOverlayAddress((void**)&VU1SetScissor_lookup), &hook_OnVU1SetScissor);
+}
+
+//--------------------------------------------------------------------------
+void hook_OnVU1AddGsRegister(u32 reg, u64 rval)
+{
+  // get hooked func
+  VU1AddGsRegister_f vu1AddGsRegisterFunc = (VU1AddGsRegister_f)GetOverlayAddress((void**)&VU1AddGsRegister_lookup);
+  if (!vu1AddGsRegisterFunc) return;
+
+  // store
+  if (reg < 0x80) vu1GsRegisters[reg] = rval;
+
+  // remove hook so we can call base
+  hookerRestoreFunctionEntrypoint(HOOK_ID_VU1_ADD_GS_REGISTER, vu1AddGsRegisterFunc);
+
+  // call base
+  vu1AddGsRegisterFunc(reg, rval);
+
+  // reinstall hook
+  hookerInstallFunctionEntrypoint(HOOK_ID_VU1_ADD_GS_REGISTER, vu1AddGsRegisterFunc, &hook_OnVU1AddGsRegister);
+}
+
+//--------------------------------------------------------------------------
 void hook_OnDrawWidget2D(struct Widget2D *pwidget, int scr_x, int scr_y, float scale_x, float scale_y, float theta_radians, u32 rgba, float t_frame)
 {
   GameCommandDrawWidget2D_t cmd;
@@ -78,14 +143,18 @@ void hook_OnDrawWidget2D(struct Widget2D *pwidget, int scr_x, int scr_y, float s
   drawWidget2DFunc(pwidget, scr_x, scr_y, scale_x, scale_y, theta_radians, rgba, t_frame);
 
   // pass upstream
+  getVu1DrawState(&cmd.Vu1DrawState);
   memcpy(&cmd.Widget, pwidget, sizeof(cmd.Widget));
   cmd.X = scr_x;
   cmd.Y = scr_y;
+  cmd.CanvasWidth = GetCanvasToScreenX();
+  cmd.CanvasHeight = GetCanvasToScreenY();
   cmd.ScaleX = scale_x;
   cmd.ScaleY = scale_y;
   cmd.Theta = theta_radians;
   cmd.Color = rgba;
   cmd.TFrame = t_frame;
+  cmd.Z = GetDraw2dZ();
   writeCommand(GAME_CMD_DRAW_WIDGET2D, &cmd, sizeof(GameCommandDrawWidget2D_t));
 
   // reinstall hook
@@ -101,36 +170,8 @@ void hook_OnDrawQuad(vec2f *vPoints, struct DrawParams *pParams)
   DrawQuad_f drawQuadFunc = (DrawQuad_f)GetOverlayAddress((void**)&DrawQuad_lookup);
   if (!drawQuadFunc) return;
 
-  struct vu1Buf {
-    u32 w0;
-    u32 w1;
-    u32 w2;
-    u32 w3;
-  };
-
-  // determine zwrite/ztest/draw state
-  // this can fail if vif packets aren't 0x10 in size
-  // todo: add support for all vif packets
-  struct vu1Buf *vbuf = (struct vu1Buf*)GetVu1Buf();
-  int vbufUse = GetVu1Use();
-  int bufIdx = 0;
-  int hasZBuf = 0, hasDraw = 0;
-  while (bufIdx < vbufUse) {
-    if (vbuf->w2 == 0x4e) {
-      cmd.ZWrite = vbuf->w1 == 0;
-      hasZBuf = 1;
-    }
-    if (vbuf->w2 == 0x4c) {
-      cmd.Draw = vbuf->w1 == 0;
-      hasDraw = 1;
-    }
-
-    if (hasZBuf && hasDraw) break;
-    --vbuf;
-    bufIdx += 0x10;
-  }
-
   // pass upstream
+  getVu1DrawState(&cmd.Vu1DrawState);
   memcpy(cmd.Points, vPoints, sizeof(cmd.Points));
   memcpy(&cmd.Params, pParams, sizeof(cmd.Params));
   cmd.Z = GetDraw2dZ();
@@ -166,8 +207,7 @@ void hook_OnDrawScreenGQuad(u64 *vertices, u32 *colors)
   }
 
   // pass upstream
-  cmd.ZWrite = 0;
-  cmd.Draw = 1;
+  getVu1DrawState(&cmd.Vu1DrawState);
   cmd.Z = vertices[0] >> 32;
   cmd.Params.iUsing = 8; // colors
   memcpy(cmd.Params.vColors, colors, sizeof(cmd.Params.vColors));
@@ -198,21 +238,34 @@ void hook_OnFontPrint(float x, float y, u64 rgba, char* s, int length, float sca
   // call base
   fontPrintFunc(x, y, rgba, s, length, scaleX, scaleX, alignment, bEnableDropShadow, dropShadowColor, dropShadowXOffset, dropShadowYOffset); 
 
+  // remove horizontal and vertical alignment
+  int width = FontStringLength(s, length, scaleX);
+  int height = FontStringHeight(s, length, scaleY);
+  switch (alignment % 3)
+  {
+    case 1: x -= width * 0.5; break;
+    case 2: x -= width * 1.0; break;
+  }
+
+  switch (alignment / 3)
+  {
+    case 1: y -= height * 0.5; break;
+    case 2: y -= height * 1.0; break;
+  }
+
   // pass upstream
   cmd.Color = rgba;
   cmd.Length = length;
-  cmd.Alignment = alignment;
   cmd.EnableDropShadow = bEnableDropShadow;
   cmd.DropShadowColor = dropShadowColor;
-  cmd.X = x;
-  cmd.Y = y;
+  cmd.X = x / GetCanvasToScreenX();
+  cmd.Y = y / GetCanvasToScreenY();
   cmd.ScaleX = scaleX;
   cmd.ScaleY = scaleY;
-  cmd.DropShadowXOffset = dropShadowXOffset;
-  cmd.DropShadowYOffset = dropShadowYOffset;
+  cmd.DropShadowXOffset = dropShadowXOffset / GetCanvasToScreenX();
+  cmd.DropShadowYOffset = dropShadowYOffset / GetCanvasToScreenY();
   cmd.Font = PEEK_I8(0x0021dec4);
-  cmd.Width = FontStringLength(s, length, scaleX);
-  cmd.Height = FontStringHeight(s, length, scaleY);
+  getVu1DrawState(&cmd.Vu1DrawState);
 
   if (s) {
     strncpy(cmd.Message, s, sizeof(cmd.Message));
@@ -265,6 +318,12 @@ void hook(void) {
 
   // hook DrawWidget2D
   hookerInstallFunctionEntrypoint(HOOK_ID_DRAW_WIDGET_2D, GetOverlayAddress((void**)&DrawWidget2D_lookup), &hook_OnDrawWidget2D);
+
+  // hook VU1_addGsRegister
+  hookerInstallFunctionEntrypoint(HOOK_ID_VU1_ADD_GS_REGISTER, GetOverlayAddress((void**)&VU1AddGsRegister_lookup), &hook_OnVU1AddGsRegister);
+
+  // hook VU1_setScissor
+  hookerInstallFunctionEntrypoint(HOOK_ID_VU1_SET_SCISSOR, GetOverlayAddress((void**)&VU1SetScissor_lookup), &hook_OnVU1SetScissor);
 }
 
 //--------------------------------------------------------------------------
@@ -292,6 +351,7 @@ void initialize(void) {
   PRINT_VAR_ADDR(config.camDeltaY);
   PRINT_VAR_ADDR(config.disableRendering);
   
+  memset(vu1GsRegisters, 0, sizeof(vu1GsRegisters));
   config.ready = 1;
 }
 

@@ -66,10 +66,13 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_Texture: {fileID: 0}
-  PolyLen: 3
-  LineWidth: 2.410714
+  m_PolyLen: 3
+  m_LineWidth: 2.4
+  m_FillConnectingLineSegments: 0
   m_Vertices: []
   m_UVs: []
   m_Colors: []
   m_Indices: []
-  ConnectSegments: 1
+  m_ZWrite: 0
+  m_Draw: 0
+  m_ZTest: 0

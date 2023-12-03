@@ -27,6 +27,39 @@ public interface IGameCommand
     void Deserialize(BinaryReader reader, int size);
 }
 
+public class Vu1DrawState
+{
+    public Vector4 Scissor;
+    public uint Alpha;
+    public RCHelper.GS_ZTEST ZTest;
+    public bool ZWrite;
+    public bool Draw;
+
+    public void Deserialize(BinaryReader reader)
+    {
+        var scissorLeft = reader.ReadInt16();
+        var scissorRight = reader.ReadInt16();
+        var scissorTop = reader.ReadInt16();
+        var scissorBottom = reader.ReadInt16();
+
+        Scissor.x = scissorLeft / 16384f;
+        Scissor.y = scissorRight / 16384f;
+        Scissor.z = scissorTop / 16384f;
+        Scissor.w = scissorBottom / 16384f;
+
+        Alpha = reader.ReadUInt32();
+        ZTest = (RCHelper.GS_ZTEST)reader.ReadByte();
+        ZWrite = reader.ReadBoolean();
+        Draw = reader.ReadBoolean();
+        reader.ReadBytes(1);
+    }
+
+    public void Serialize(BinaryWriter writer)
+    {
+        throw new NotImplementedException();
+    }
+}
+
 public class GameCommandOnTickEnd : IGameCommand
 {
     public GameCommandIds Id => GameCommandIds.GAME_CMD_ON_TICK_END;
@@ -144,9 +177,9 @@ public class GameCommandDrawReticule : IGameCommand
 public class GameCommandDrawText : IGameCommand
 {
     public GameCommandIds Id => GameCommandIds.GAME_CMD_DRAW_TEXT;
+    public Vu1DrawState Vu1DrawState { get; set; }
     public Color Color { get; set; }
     public int Length { get; set; }
-    public int Alignment { get; set; }
     public bool EnableDropShadow { get; set; }
     public Color DropShadowColor { get; set; }
     public float X { get; set; }
@@ -156,15 +189,14 @@ public class GameCommandDrawText : IGameCommand
     public float DropShadowOffsetX { get; set; }
     public float DropShadowOffsetY { get; set; }
     public byte Font { get; set; }
-    public short Width { get; set; }
-    public short Height { get; set; }
     public string Message { get; set; }
 
     public void Deserialize(BinaryReader reader, int size)
     {
+        Vu1DrawState = new Vu1DrawState();
+        Vu1DrawState.Deserialize(reader);
         Color = reader.ReadUInt32().RCRgbaToColor();
         Length = reader.ReadInt32();
-        Alignment = reader.ReadInt32();
         DropShadowColor = reader.ReadUInt32().RCRgbaToColor();
         X = reader.ReadSingle();
         Y = reader.ReadSingle();
@@ -172,8 +204,6 @@ public class GameCommandDrawText : IGameCommand
         ScaleY = reader.ReadSingle();
         DropShadowOffsetX = reader.ReadSingle();
         DropShadowOffsetY = reader.ReadSingle();
-        Width = reader.ReadInt16();
-        Height = reader.ReadInt16();
         EnableDropShadow = reader.ReadBoolean();
         Font = reader.ReadByte();
         Message = reader.ReadString(64);
@@ -189,10 +219,13 @@ public class GameCommandDrawText : IGameCommand
 public class GameCommandDrawQuad : IGameCommand
 {
     public GameCommandIds Id => GameCommandIds.GAME_CMD_DRAW_QUAD;
+    public Vu1DrawState Vu1DrawState { get; set; }
+
     public Vector2 Point0 { get; set; }
     public Vector2 Point1 { get; set; }
     public Vector2 Point2 { get; set; }
     public Vector2 Point3 { get; set; }
+
     public int Using { get; set; }
     public int Icon { get; set; }
     public RCPointer Image { get; set; }
@@ -204,12 +237,14 @@ public class GameCommandDrawQuad : IGameCommand
     public Color Color2 { get; set; }
     public Color Color3 { get; set; }
     public float Fade { get; set; }
+
     public uint Z { get; set; }
-    public bool ZWrite { get; set; }
-    public bool Draw { get; set; }
 
     public void Deserialize(BinaryReader reader, int size)
     {
+        Vu1DrawState = new Vu1DrawState();
+        Vu1DrawState.Deserialize(reader);
+
         Point0 = new Vector2(reader.ReadSingle(), reader.ReadSingle());
         Point1 = new Vector2(reader.ReadSingle(), reader.ReadSingle());
         Point2 = new Vector2(reader.ReadSingle(), reader.ReadSingle());
@@ -226,9 +261,6 @@ public class GameCommandDrawQuad : IGameCommand
         Color3 = reader.ReadUInt32().RCRgbaToColor();
         Fade = reader.ReadSingle();
         Z = reader.ReadUInt32();
-        ZWrite = reader.ReadBoolean();
-        Draw = reader.ReadBoolean();
-        reader.ReadBytes(6); // padding
     }
 
     public void Serialize(BinaryWriter writer)
@@ -240,6 +272,9 @@ public class GameCommandDrawQuad : IGameCommand
 public class GameCommandDrawWidget2D : IGameCommand
 {
     public GameCommandIds Id => GameCommandIds.GAME_CMD_DRAW_WIDGET2D;
+
+    public Vu1DrawState Vu1DrawState { get; set; }
+
     public RCPointer Positions { get; set; }
     public RCPointer UVs { get; set; }
     public RCPointer Colors { get; set; }
@@ -252,14 +287,20 @@ public class GameCommandDrawWidget2D : IGameCommand
 
     public int X { get; set; }
     public int Y { get; set; }
+    public float CanvasWidth { get; set; }
+    public float CanvasHeight { get; set; }
     public float ScaleX { get; set; }
     public float ScaleY { get; set; }
     public float Theta { get; set; }
     public Color Color { get; set; }
     public float TFrame { get; set; }
+    public uint Z { get; set; }
 
     public void Deserialize(BinaryReader reader, int size)
     {
+        Vu1DrawState = new Vu1DrawState();
+        Vu1DrawState.Deserialize(reader);
+
         Positions = new RCPointer(reader.ReadUInt32());
         UVs = new RCPointer(reader.ReadUInt32());
         Colors = new RCPointer(reader.ReadUInt32());
@@ -273,11 +314,14 @@ public class GameCommandDrawWidget2D : IGameCommand
 
         X = reader.ReadInt32();
         Y = reader.ReadInt32();
+        CanvasWidth = reader.ReadSingle();
+        CanvasHeight = reader.ReadSingle();
         ScaleX = reader.ReadSingle();
         ScaleY = reader.ReadSingle();
         Theta = reader.ReadSingle();
         Color = reader.ReadUInt32().RCRgbaToColor();
         TFrame = reader.ReadSingle();
+        Z = reader.ReadUInt32();
     }
 
     public void Serialize(BinaryWriter writer)

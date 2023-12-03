@@ -15,6 +15,18 @@ enum GameCommandIds {
   GAME_CMD_DRAW_WIDGET2D = 7,
 };
 
+struct Vu1DrawState {
+  short ScissorLeft;
+  short ScissorRight;
+  short ScissorTop;
+  short ScissorBottom;
+  u32 Alpha;
+  u8 ZTest;
+  char ZWrite;
+  char Draw;
+  char Padding;
+};
+
 typedef struct GameCommandMobySpawned {
   vec4 Position;
   float Scale;
@@ -41,9 +53,9 @@ typedef struct GameCommandDrawReticule {
 } GameCommandDrawReticule_t;
 
 typedef struct GameCommandDrawText {
+  struct Vu1DrawState Vu1DrawState;
   u32 Color;
   int Length;
-  int Alignment;
   u32 DropShadowColor;
   float X;
   float Y;
@@ -51,30 +63,31 @@ typedef struct GameCommandDrawText {
   float ScaleY;
   float DropShadowXOffset;
   float DropShadowYOffset;
-  short Width;
-  short Height;
   char EnableDropShadow;
   char Font;
   char Message[64];
 } GameCommandDrawText_t;
 
 typedef struct GameCommandDrawQuad {
+  struct Vu1DrawState Vu1DrawState;
   vec2f Points[4];
   struct DrawParams Params;
   u32 Z;
-  char ZWrite;
-  char Draw;
 } GameCommandDrawQuad_t;
 
 typedef struct GameCommandDrawWidget2D {
+  struct Vu1DrawState Vu1DrawState;
   struct Widget2D Widget;
   int X;
   int Y;
+  float CanvasWidth;
+  float CanvasHeight;
   float ScaleX;
   float ScaleY;
   float Theta;
   u32 Color;
   float TFrame;
+  u32 Z;
 } GameCommandDrawWidget2D_t;
 
 void processCommands(void);

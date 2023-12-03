@@ -202,12 +202,12 @@ public class GameController : MonoBehaviour
                 EmuInterop.WriteInt32(Constants.ConfigAddress + 4 + 0x20 + 8, (!UsingGameRender) ? 1 : 0);
 
             // write audio settings
-            if (RCHelper.IsRunningDeadlocked())
-            {
-                EmuInterop.WriteInt32(0x00171D44, (int)(0x400 * Config.Singleton.Audio.MasterVolume * Config.Singleton.Audio.MusicVolume));
-                EmuInterop.WriteInt32(0x00171D48, (int)(0x400 * Config.Singleton.Audio.MasterVolume * Config.Singleton.Audio.EffectsVolume));
-                EmuInterop.WriteInt32(0x00171D4C, (int)(0x400 * Config.Singleton.Audio.MasterVolume * Config.Singleton.Audio.DialogVolume)); //.TryGetResult(out _);
-            }
+            //if (RCHelper.GetRunningGame())
+            //{
+            //    EmuInterop.WriteInt32(0x00171D44, (int)(0x400 * Config.Singleton.Audio.MasterVolume * Config.Singleton.Audio.MusicVolume));
+            //    EmuInterop.WriteInt32(0x00171D48, (int)(0x400 * Config.Singleton.Audio.MasterVolume * Config.Singleton.Audio.EffectsVolume));
+            //    EmuInterop.WriteInt32(0x00171D4C, (int)(0x400 * Config.Singleton.Audio.MasterVolume * Config.Singleton.Audio.DialogVolume)); //.TryGetResult(out _);
+            //}
         }
 
 
@@ -255,7 +255,7 @@ public class GameController : MonoBehaviour
         RawPad.LeftHorizontal = RawPad.LeftVertical = RawPad.RightHorizontal = RawPad.RightVertical = 0;
         RawPad.Buttons = PadButtons.None;
 
-        if (!RCHelper.IsRunningDeadlocked())
+        if (!RCHelper.GetRunningGame().HasValue)
             EmuInterop.SetPad(0, 0, padBuffer);
     }
 

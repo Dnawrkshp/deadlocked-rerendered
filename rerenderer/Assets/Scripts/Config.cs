@@ -17,6 +17,7 @@ public class Config
     public static readonly string[] INPUT_SOURCES = new[] { "Auto", "KBM", "Joystick" };
 
     public string IsoPath { get; set; }
+    public string GameDataPath { get; set; }
     public bool ShowFPSCounter { get; set; } = true;
     public bool ShownFirstTimePopup { get; set; } = false;
     public int EmulatorBuildType { get; set; } = 0; // AUTO, AVX2, DEFAULT
